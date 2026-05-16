@@ -1,4 +1,4 @@
-# 🎵 Static Wave Viewer V0.1
+# 🎵 Standing Wave Viewer V0.1
 
 A 4D Room Acoustics Simulator built with Python, Streamlit, and Plotly.
 This tool visualizes standing waves (room modes) in a 3D space and calculates the frequency response (SPL) at a specific listener position, taking speaker placement and wall reflection coefficients into account.
