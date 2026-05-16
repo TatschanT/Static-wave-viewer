@@ -2,8 +2,8 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Static Wave Viewer V0.1", layout="wide")
-st.title("🎵 Static Wave Viewer V0.1")
+st.set_page_config(page_title="Standing Wave Viewer V0.1", layout="wide")
+st.title("🎵 Standing Wave Viewer V0.1")
 
 # ==========================================
 # UI: Sidebar (Common Settings)
