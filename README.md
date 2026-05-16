@@ -23,6 +23,6 @@ This tool visualizes standing waves (room modes) in a 3D space and calculates th
 
 Run the following command in your terminal:
 ```bash
-streamlit run Static_Wave_Viewer_V0_1.py
+streamlit run Statnding_Wave_Viewer_V0_1.py
 ```
 Then, open the provided Local URL (usually `http://localhost:8501`) in your web browser.
