@@ -1,0 +1,22 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.0] - 2026-05-17
+### Added
+- High-precision (1cm) slider steps for accurate equipment placement.
+- Improved frequency resolution in 1D mode to 1Hz steps (20Hz-200Hz).
+- Improved frequency resolution in 3D mode to 2Hz steps (20Hz-200Hz).
+
+### Changed
+- Fixed 3D visualization grid resolution to 32x32x32 to maintain consistent performance regardless of room size.
+- Changed Volume Rendering surface_count from 15 to 12 for performance optimization.
+
+## [0.1.0] - 2026-05-16
+### Added
+- Initial release of the Standing Wave Viewer.
+- 3D Volume rendering of room standing waves.
+- UI controls for room dimensions, equipment placement, and wall reflection coefficients.
