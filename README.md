@@ -1,4 +1,4 @@
-# 🎵 Standing Wave Viewer V0.1
+# 🎵 Standing Wave Viewer
 
 A 4D Room Acoustics Simulator built with Python, Streamlit, and Plotly.
 This tool visualizes standing waves (room modes) in a 3D space and calculates the frequency response (SPL) at a specific listener position, taking speaker placement and wall reflection coefficients into account.
@@ -23,6 +23,6 @@ This tool visualizes standing waves (room modes) in a 3D space and calculates th
 
 Run the following command in your terminal:
 ```bash
-streamlit run Statnding_Wave_Viewer_V0_1.py
+streamlit run Statnding_Wave_Viewer.py
 ```
 Then, open the provided Local URL (usually `http://localhost:8501`) in your web browser.
