@@ -2,8 +2,8 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Standing Wave Viewer V0.1", layout="wide")
-st.title("🎵 Standing Wave Viewer V0.1")
+st.set_page_config(page_title="Standing Wave Viewer V0.2", layout="wide")
+st.title("🎵 Standing Wave Viewer V0.2")
 
 # ==========================================
 # UI: Sidebar (Common Settings)
@@ -21,13 +21,13 @@ Ly = st.sidebar.slider("Depth (Ly)", 2.0, 10.0, 2.6, 0.1)
 Lz = st.sidebar.slider("Height (Lz)", 2.0, 5.0, 2.4, 0.1)
 
 st.sidebar.header("Equipment Positions (m)")
-spk_x = st.sidebar.slider("Speaker X", 0.0, Lx, 0.5, 0.1)
-spk_y = st.sidebar.slider("Speaker Y", 0.0, Ly, 0.5, 0.1)
-spk_z = st.sidebar.slider("Speaker Z", 0.0, Lz, 0.5, 0.1)
+spk_x = st.sidebar.slider("Speaker X", 0.0, Lx, 0.5, 0.01)
+spk_y = st.sidebar.slider("Speaker Y", 0.0, Ly, 0.5, 0.01)
+spk_z = st.sidebar.slider("Speaker Z", 0.0, Lz, 0.5, 0.01)
 
-mic_x = st.sidebar.slider("Mic X", 0.0, Lx, Lx/2, 0.1)
-mic_y = st.sidebar.slider("Mic Y", 0.0, Ly, Ly/2, 0.1)
-mic_z = st.sidebar.slider("Mic Z", 0.0, Lz, Lz/2, 0.1)
+mic_x = st.sidebar.slider("Mic X", 0.0, Lx, Lx/2, 0.01)
+mic_y = st.sidebar.slider("Mic Y", 0.0, Ly, Ly/2, 0.01)
+mic_z = st.sidebar.slider("Mic Z", 0.0, Lz, Lz/2, 0.01)
 
 with st.sidebar.expander("🧱 Wall Reflection Coefficients (0.0=Absorb ~ 1.0=Reflect)"):
     st.markdown("**X-axis (Left/Right Walls)**")
@@ -40,7 +40,6 @@ with st.sidebar.expander("🧱 Wall Reflection Coefficients (0.0=Absorb ~ 1.0=Re
     Rz1 = st.slider("Floor (Z=0)", 0.0, 1.0, 0.80, 0.05)
     Rz2 = st.slider("Ceiling (Z=Lz)", 0.0, 1.0, 0.80, 0.05)
 
-# Calculate average reflection coefficients for each axis
 Rx = (Rx1 + Rx2) / 2.0
 Ry = (Ry1 + Ry2) / 2.0
 Rz = (Rz1 + Rz2) / 2.0
@@ -49,7 +48,8 @@ Rz = (Rz1 + Rz2) / 2.0
 # Physics Calculation Engine
 # ==========================================
 SPEED_OF_SOUND = 343.0
-FREQS = np.arange(20, 205, 5)
+FREQS_1D = np.arange(20, 201, 1)
+FREQS_3D = np.arange(20, 201, 2)
 
 def get_max_modes(Lx, Ly, Lz):
     return (
@@ -74,24 +74,24 @@ def calc_gamma(nx, ny, nz, Rx, Ry, Rz):
 @st.cache_data(show_spinner=False)
 def compute_f_response_1d(Lx, Ly, Lz, sx, sy, sz, mx, my, mz, Rx, Ry, Rz):
     max_nx, max_ny, max_nz = get_max_modes(Lx, Ly, Lz)
-    tensor_1d = np.zeros(len(FREQS))
-
+    tensor_1d = np.zeros(len(FREQS_1D))
+    
     for nx in range(max_nx):
         for ny in range(max_ny):
             for nz in range(max_nz):
                 if nx == 0 and ny == 0 and nz == 0: continue
                 fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
                 if fn > 250: continue
-
+                
                 exc = calc_shape(nx, sx, Lx, Rx) * calc_shape(ny, sy, Ly, Ry) * calc_shape(nz, sz, Lz, Rz)
                 rec = calc_shape(nx, mx, Lx, Rx) * calc_shape(ny, my, Ly, Ry) * calc_shape(nz, mz, Lz, Rz)
                 gamma = calc_gamma(nx, ny, nz, Rx, Ry, Rz)
-
-                for i, f in enumerate(FREQS):
+                
+                for i, f in enumerate(FREQS_1D):
                     # Normalize with (50.0 / fn) to emulate flat acoustic characteristics
                     res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
                     tensor_1d[i] += (exc * rec * res_amp) ** 2
-
+                    
     f_response_db = 20 * np.log10(np.clip(np.sqrt(tensor_1d), 1e-10, None))
     # Normalize the maximum peak to 0 dB
     f_response_db = f_response_db - np.max(f_response_db)
@@ -99,13 +99,12 @@ def compute_f_response_1d(Lx, Ly, Lz, sx, sy, sz, mx, my, mz, Rx, Ry, Rz):
 
 @st.cache_data(show_spinner="Calculating spatial tensor...")
 def compute_tensor_3d(Lx, Ly, Lz, sx, sy, sz, Rx, Ry, Rz):
-    resolution = 0.10
-    x = np.arange(0, Lx + resolution, resolution)
-    y = np.arange(0, Ly + resolution, resolution)
-    z = np.arange(0, Lz + resolution, resolution)
+    x = np.linspace(0, Lx, 32)
+    y = np.linspace(0, Ly, 32)
+    z = np.linspace(0, Lz, 32)
     X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
 
-    tensor = np.zeros((len(FREQS), len(x), len(y), len(z)))
+    tensor = np.zeros((len(FREQS_3D), len(x), len(y), len(z)))
     max_nx, max_ny, max_nz = get_max_modes(Lx, Ly, Lz)
 
     for nx in range(max_nx):
@@ -114,25 +113,23 @@ def compute_tensor_3d(Lx, Ly, Lz, sx, sy, sz, Rx, Ry, Rz):
                 if nx == 0 and ny == 0 and nz == 0: continue
                 fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
                 if fn > 250: continue
-
+                
                 exc = calc_shape(nx, sx, Lx, Rx) * calc_shape(ny, sy, Ly, Ry) * calc_shape(nz, sz, Lz, Rz)
                 mode_shape = calc_shape(nx, X, Lx, Rx) * calc_shape(ny, Y, Ly, Ry) * calc_shape(nz, Z, Lz, Rz)
                 gamma = calc_gamma(nx, ny, nz, Rx, Ry, Rz)
 
-                for i, f in enumerate(FREQS):
+                for i, f in enumerate(FREQS_3D):
                     # Normalize with (50.0 / fn) to emulate flat acoustic characteristics
                     res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
                     tensor[i] += (exc * mode_shape * res_amp) ** 2
 
     return X.flatten(), Y.flatten(), Z.flatten(), np.sqrt(tensor)
 
-# Helper function to draw the room wireframe
 def draw_room_wireframe(Lx, Ly, Lz):
     x_lines = [0, Lx, Lx, 0, 0, 0, Lx, Lx, 0, 0, None, Lx, Lx, None, Lx, Lx, None, 0, 0]
     y_lines = [0, 0, Ly, Ly, 0, 0, 0, Ly, Ly, 0, None, 0, 0, None, Ly, Ly, None, Ly, Ly]
     z_lines = [0, 0, 0, 0, 0, Lz, Lz, Lz, Lz, Lz, None, 0, Lz, None, 0, Lz, None, 0, Lz]
     return go.Scatter3d(x=x_lines, y=y_lines, z=z_lines, mode='lines', line=dict(color='gray', width=3), name="Room", hoverinfo='skip')
-
 
 # ==========================================
 # Rendering
@@ -140,7 +137,7 @@ def draw_room_wireframe(Lx, Ly, Lz):
 if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
     st.info("💡 **Layout Placement Mode**: Move the equipment to find a flat frequency response. Lowering the reflection coefficient smooths out the peaks.")
     col1, col2 = st.columns([5, 5])
-
+    
     trace_spk = go.Scatter3d(x=[spk_x], y=[spk_y], z=[spk_z], mode='markers', marker=dict(size=8, color='blue', symbol='square', line=dict(color='white', width=2)), name="Speaker")
     trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
@@ -151,10 +148,10 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             margin=dict(l=0, r=0, b=0, t=30), height=500, title="3D Equipment Layout"
         )
         st.plotly_chart(fig_layout, width='stretch')
-
+        
     with col2:
         f_response_db = compute_f_response_1d(Lx, Ly, Lz, spk_x, spk_y, spk_z, mic_x, mic_y, mic_z, Rx, Ry, Rz)
-        fig_f = go.Figure(data=[go.Scatter(x=FREQS, y=f_response_db, mode='lines+markers', line=dict(color='red', width=2))])
+        fig_f = go.Figure(data=[go.Scatter(x=FREQS_1D, y=f_response_db, mode='lines+markers', line=dict(color='red', width=2))])
         fig_f.update_layout(
             xaxis_title="Frequency (Hz)", yaxis_title="Relative SPL (dB)",
             yaxis=dict(range=[-25, 2]), 
@@ -185,25 +182,27 @@ else:
     fig_vol.add_trace(trace_spk)
     fig_vol.add_trace(trace_mic)
 
-    initial_val = tensor_abs[0].flatten()
+    # 1. 初期値の丸め
+    initial_val = np.round(tensor_abs[0].flatten(), 2)
     fig_vol.add_trace(go.Volume(
         x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
         isomin=np.percentile(initial_val, 60), isomax=global_max,
         opacity=0.3, opacityscale=[[-0.5, 0], [0, 0.2], [1, 1]],
-        surface_count=15, colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
+        surface_count=12,
+        colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
         caps=dict(x_show=False, y_show=False, z_show=False), name="Sound Pressure"
     ))
 
-    # Animation frames (update only the Volume at index 3)
     frames = []
-    for i, f in enumerate(FREQS):
-        val = tensor_abs[i].flatten()
+    for i, f in enumerate(FREQS_3D):
+        val = tensor_abs[i].flatten().astype(np.float32)
         frames.append(go.Frame(
             data=[go.Volume(
-                x=X_flat, y=Y_flat, z=Z_flat, value=val,
+                value=val,
                 isomin=np.percentile(val, 60), isomax=global_max,
                 opacity=0.3, opacityscale=[[-0.5, 0], [0, 0.2], [1, 1]],
-                surface_count=15, colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
+                surface_count=12,
+                colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
                 caps=dict(x_show=False, y_show=False, z_show=False)
             )],
             traces=[3], 
@@ -216,13 +215,15 @@ else:
         margin=dict(l=0, r=0, b=0, t=30), height=700, showlegend=False,
         updatemenus=[dict(
             type="buttons", x=0.05, y=0,
-            buttons=[dict(label="Play", method="animate", args=[None, dict(frame=dict(duration=500, redraw=True), fromcurrent=True)])]
+            buttons=[dict(label="Play", method="animate", 
+                          args=[None, dict(frame=dict(duration=500, redraw=True), transition=dict(duration=0), fromcurrent=True)])]
         )],
         sliders=[dict(
             active=0, yanchor="top", xanchor="left", currentvalue=dict(font=dict(size=16), prefix="Frequency: ", suffix=" Hz"),
-            transition=dict(duration=300, easing="cubic-in-out"), pad=dict(b=10, t=50), len=0.9, x=0.15, y=0,
-            steps=[dict(args=[[str(f)], dict(frame=dict(duration=300, redraw=True), mode="immediate", transition=dict(duration=300))],
-                        label=str(f), method="animate") for f in FREQS]
+            transition=dict(duration=0),
+            pad=dict(b=10, t=50), len=0.9, x=0.15, y=0,
+            steps=[dict(args=[[str(f)], dict(frame=dict(duration=300, redraw=True), mode="immediate", transition=dict(duration=0))], # ★ ここも無効化
+                        label=str(f), method="animate") for f in FREQS_3D]
         )]
     )
     st.plotly_chart(fig_vol, width='stretch')
