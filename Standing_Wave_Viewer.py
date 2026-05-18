@@ -105,11 +105,11 @@ sim_config = SimConfig(
     freqs_3d=FREQS_3D
 )
 
-def get_max_modes(Lx, Ly, Lz):
+def get_max_modes(room: RoomConfig, config: SimConfig):
     return (
-        int(2.0 * Lx * 250 / SPEED_OF_SOUND) + 2,
-        int(2.0 * Ly * 250 / SPEED_OF_SOUND) + 2,
-        int(2.0 * Lz * 250 / SPEED_OF_SOUND) + 2
+        int(2.0 * room.Lx * 250 / config.speed_of_sound) + 2,
+        int(2.0 * room.Ly * 250 / config.speed_of_sound) + 2,
+        int(2.0 * room.Lz * 250 / config.speed_of_sound) + 2
     )
 
 def calc_shape(n, pos, L, R):
@@ -121,10 +121,10 @@ def get_psi(n, pos, L, R):
     theta = n * np.pi * pos / L
     return np.cos(theta) - 1j * ((1 - R) / (1 + R)) * np.sin(theta)
 
-def calc_gamma(nx, ny, nz, Rx, Ry, Rz):
+def calc_gamma(nx, ny, nz, room: RoomConfig):
     n_sum = nx + ny + nz
     if n_sum == 0: return 5.0
-    R_eff = (nx * Rx + ny * Ry + nz * Rz) / n_sum
+    R_eff = (nx * room.Rx + ny * room.Ry + nz * room.Rz) / n_sum
     return 3.0 + 40.0 * (1.0 - R_eff)
 
 @st.cache_data(show_spinner=False)
@@ -138,7 +138,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
     SPEED_OF_SOUND = config.speed_of_sound
     FREQS_1D = config.freqs_1d
 
-    max_nx, max_ny, max_nz = get_max_modes(Lx, Ly, Lz)
+    max_nx, max_ny, max_nz = get_max_modes(room, config)
     tensor_1d = np.zeros(len(FREQS_1D))
 
     if "True Complex Field" in corr_mode:
@@ -154,7 +154,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                         fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
                         if fn > 250: continue
 
-                        gamma = calc_gamma(nx, ny, nz, Rx, Ry, Rz)
+                        gamma = calc_gamma(nx, ny, nz, room)
                         res_complex = (50.0 / fn) / ((f_query - fn) + 1j * gamma)
 
                         psi1 = get_psi(nx, sx, Lx, Rx) * get_psi(ny, sy, Ly, Ry) * get_psi(nz, sz, Lz, Rz)
@@ -188,7 +188,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                         exc = np.abs(psi1)
 
                     rec = calc_shape(nx, mx, Lx, Rx) * calc_shape(ny, my, Ly, Ry) * calc_shape(nz, mz, Lz, Rz)
-                    gamma = calc_gamma(nx, ny, nz, Rx, Ry, Rz)
+                    gamma = calc_gamma(nx, ny, nz, room)
 
                     for i, f in enumerate(FREQS_1D):
                         res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
@@ -215,7 +215,7 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
     X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
 
     tensor = np.zeros((len(FREQS_3D), len(x), len(y), len(z)))
-    max_nx, max_ny, max_nz = get_max_modes(Lx, Ly, Lz)
+    max_nx, max_ny, max_nz = get_max_modes(room, config)
 
     if "True Complex Field" in corr_mode:
         for i, f_query in enumerate(FREQS_3D):
@@ -229,7 +229,7 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                         fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
                         if fn > 250: continue
 
-                        gamma = calc_gamma(nx, ny, nz, Rx, Ry, Rz)
+                        gamma = calc_gamma(nx, ny, nz, room)
                         res_complex = (50.0 / fn) / ((f_query - fn) + 1j * gamma)
 
                         mode_complex = get_psi(nx, X, Lx, Rx) * get_psi(ny, Y, Ly, Ry) * get_psi(nz, Z, Lz, Rz)
@@ -261,7 +261,7 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                         exc = np.abs(psi1)
 
                     mode_shape = calc_shape(nx, X, Lx, Rx) * calc_shape(ny, Y, Ly, Ry) * calc_shape(nz, Z, Lz, Rz)
-                    gamma = calc_gamma(nx, ny, nz, Rx, Ry, Rz)
+                    gamma = calc_gamma(nx, ny, nz, room)
 
                     for i, f in enumerate(FREQS_3D):
                         res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
