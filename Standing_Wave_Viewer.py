@@ -1,6 +1,28 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
+from dataclasses import dataclass
+
+@dataclass
+class Position:
+    x: float
+    y: float
+    z: float
+
+@dataclass
+class RoomConfig:
+    Lx: float
+    Ly: float
+    Lz: float
+    Rx: float
+    Ry: float
+    Rz: float
+
+@dataclass
+class SimConfig:
+    speed_of_sound: float
+    freqs_1d: np.ndarray
+    freqs_3d: np.ndarray
 
 st.set_page_config(page_title="Standing Wave Viewer V0.7 (Golden Master)", layout="wide")
 st.title("🎵 Standing Wave Viewer V0.7 (Unified Calculation Modes)")
@@ -72,6 +94,17 @@ SPEED_OF_SOUND = 343.0
 FREQS_1D = np.arange(20, 201, 1)
 FREQS_3D = np.arange(20, 201, 2)
 
+# Instantiate configuration objects
+room = RoomConfig(Lx=Lx, Ly=Ly, Lz=Lz, Rx=Rx, Ry=Ry, Rz=Rz)
+spk1_pos = Position(x=spk_x, y=spk_y, z=spk_z)
+spk2_pos = Position(x=spk2_x, y=spk2_y, z=spk2_z)
+mic_pos = Position(x=mic_x, y=mic_y, z=mic_z)
+sim_config = SimConfig(
+    speed_of_sound=SPEED_OF_SOUND,
+    freqs_1d=FREQS_1D,
+    freqs_3d=FREQS_3D
+)
+
 def get_max_modes(Lx, Ly, Lz):
     return (
         int(2.0 * Lx * 250 / SPEED_OF_SOUND) + 2,
@@ -95,7 +128,16 @@ def calc_gamma(nx, ny, nz, Rx, Ry, Rz):
     return 3.0 + 40.0 * (1.0 - R_eff)
 
 @st.cache_data(show_spinner=False)
-def compute_f_response_1d(Lx, Ly, Lz, num_src, corr_mode, sx, sy, sz, sx2, sy2, sz2, mx, my, mz, Rx, Ry, Rz):
+def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic: Position, num_src: int, corr_mode: str, config: SimConfig):
+    # Unpack variables to keep existing logic intact
+    Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
+    Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
+    sx, sy, sz = spk1.x, spk1.y, spk1.z
+    sx2, sy2, sz2 = spk2.x, spk2.y, spk2.z
+    mx, my, mz = mic.x, mic.y, mic.z
+    SPEED_OF_SOUND = config.speed_of_sound
+    FREQS_1D = config.freqs_1d
+
     max_nx, max_ny, max_nz = get_max_modes(Lx, Ly, Lz)
     tensor_1d = np.zeros(len(FREQS_1D))
 
@@ -159,7 +201,14 @@ def compute_f_response_1d(Lx, Ly, Lz, num_src, corr_mode, sx, sy, sz, sx2, sy2, 
     return f_response_db
 
 @st.cache_data(show_spinner="Calculating spatial tensor...")
-def compute_tensor_3d(Lx, Ly, Lz, num_src, corr_mode, sx, sy, sz, sx2, sy2, sz2, Rx, Ry, Rz):
+def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src: int, corr_mode: str, config: SimConfig):
+    # Unpack variables to keep existing logic intact
+    Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
+    Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
+    sx, sy, sz = spk1.x, spk1.y, spk1.z
+    sx2, sy2, sz2 = spk2.x, spk2.y, spk2.z
+    SPEED_OF_SOUND = config.speed_of_sound
+    FREQS_3D = config.freqs_3d
     x = np.linspace(0, Lx, 32)
     y = np.linspace(0, Ly, 32)
     z = np.linspace(0, Lz, 32)
@@ -252,7 +301,7 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
         st.plotly_chart(fig_layout, width='stretch')
 
     with col2:
-        f_response_db = compute_f_response_1d(Lx, Ly, Lz, num_sources, corr_mode, spk_x, spk_y, spk_z, spk2_x, spk2_y, spk2_z, mic_x, mic_y, mic_z, Rx, Ry, Rz)
+        f_response_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config)
         fig_f = go.Figure(data=[go.Scatter(x=FREQS_1D, y=f_response_db, mode='lines+markers', line=dict(color='red', width=2))])
         fig_f.update_layout(
             xaxis_title="Frequency (Hz)", yaxis_title="Relative SPL (dB)",
@@ -265,9 +314,10 @@ else:
     if mode == "📐 3. Room Bare Specs (Rigid/Corner)":
         eff_num_sources = 1
         eff_corr = "Mono"
-        eff_spk_x, eff_spk_y, eff_spk_z = 0.0, 0.0, 0.0
-        eff_spk2_x, eff_spk2_y, eff_spk2_z = 0.0, 0.0, 0.0
-        eff_Rx, eff_Ry, eff_Rz = 1.0, 1.0, 1.0
+        # Create instances for rigid corner specs
+        eff_spk1 = Position(0.0, 0.0, 0.0)
+        eff_spk2 = Position(0.0, 0.0, 0.0)
+        eff_room = RoomConfig(Lx, Ly, Lz, 1.0, 1.0, 1.0)
         spk_plot_x, spk_plot_y, spk_plot_z = [0.0], [0.0], [0.0]
 
         trace_spk = go.Scatter3d(x=spk_plot_x, y=spk_plot_y, z=spk_plot_z, mode='markers', marker=dict(size=8, color='black', symbol='square', line=dict(color='white', width=2)), name="Source (Corner)")
@@ -275,13 +325,14 @@ else:
     else:
         eff_num_sources = num_sources
         eff_corr = corr_mode
-        eff_spk_x, eff_spk_y, eff_spk_z = spk_x, spk_y, spk_z
-        eff_spk2_x, eff_spk2_y, eff_spk2_z = spk2_x, spk2_y, spk2_z
-        eff_Rx, eff_Ry, eff_Rz = Rx, Ry, Rz
+        # Use current config objects
+        eff_spk1 = spk1_pos
+        eff_spk2 = spk2_pos
+        eff_room = room
         trace_spk = go.Scatter3d(x=spk_xs, y=spk_ys, z=spk_zs, mode='markers', marker=dict(size=8, color='blue', symbol='square', line=dict(color='white', width=2)), name="Speaker(s)")
         trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
-    X_flat, Y_flat, Z_flat, tensor_abs = compute_tensor_3d(Lx, Ly, Lz, eff_num_sources, eff_corr, eff_spk_x, eff_spk_y, eff_spk_z, eff_spk2_x, eff_spk2_y, eff_spk2_z, eff_Rx, eff_Ry, eff_Rz)
+    X_flat, Y_flat, Z_flat, tensor_abs = compute_tensor_3d(eff_room, eff_spk1, eff_spk2, eff_num_sources, eff_corr, sim_config)
     global_min = np.min(tensor_abs)
     global_max = np.percentile(tensor_abs, 98)
 
