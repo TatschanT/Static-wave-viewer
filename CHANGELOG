@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V0.7.1] - 2026-05-18
+### Refactored
+- **Introduced Dataclasses**: Implemented `@dataclass` for `RoomConfig`, `Position`, and `SimConfig` to structure application state and configuration parameters.
+- **Improved Function Signatures**: Updated core physics functions (`compute_f_response_1d` and `compute_tensor_3d`) to accept dataclass objects instead of multiple primitive variables, drastically improving readability.
+- **Safe Unpacking Mechanism**: Utilized internal variable unpacking within calculation functions to preserve the integrity of the complex physical simulation logic without rewriting the core math.
+- **Helper Function Modularization**: Updated physics helper functions (`get_max_modes`, `calc_gamma`) to accept `RoomConfig` and `SimConfig`, laying the groundwork for a standalone `PhysicsEngine` module.
+- **UI and Logic Separation**: Fully decoupled the rendering section from raw UI sidebar variables by mapping drawing functions (e.g., `draw_room_wireframe`) to the newly created dataclass properties (`room.Lx`, `eff_room.Lx`, etc.).
+
 ## [0.7.0] - 2026-05-18
 ### Added
 - Stereo mode (two sound source)

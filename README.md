@@ -1,28 +1,41 @@
 # 🎵 Standing Wave Viewer
 
-A 4D Room Acoustics Simulator built with Python, Streamlit, and Plotly.
-This tool visualizes standing waves (room modes) in a 3D space and calculates the frequency response (SPL) at a specific listener position, taking speaker placement and wall reflection coefficients into account.
+Standing Wave Viewer is an advanced 3D acoustic simulation and visualization tool built with Python and Streamlit. It calculates and visualizes room modes (standing waves) and low-frequency interference patterns to help optimize subwoofer/speaker placement and listening positions.
 
-## Features (3 Operation Modes)
-1. **Layout Placement (Ultra-fast)**: 
-   Drag sliders to move your speaker and mic. See the frequency response change in real-time to find the flattest sweet spot.
-2. **Standing Wave Viz**: 
-   Renders a 3D volume visualization of the acoustic energy distribution across the room based on your placement.
-3. **Room Bare Specs**: 
-   Shows the inherent worst-case standing waves (rigid walls, corner speaker placement) to help you understand where the natural "valleys" are.
+## ✨ Key Features
 
-## Installation
+- **Interactive 3D Room Setup**: Easily adjust room dimensions, speaker coordinates, and microphone positions using a sidebar UI with real-time 3D wireframe rendering.
+- **Accurate Frequency Response**: Simulates the frequency response (20Hz - 200Hz) at the microphone position, accounting for room dimensions and wall reflection coefficients.
+- **Volumetric 3D Visualization**: Animates the sound pressure distribution (nodes and antinodes) across the entire 3D room space for any given frequency.
+- **Advanced Stereo Interference Models**: 
+  Supports both Mono and Stereo configurations with three calculation modes:
+  - **Uncorrelated (Independent Power Sum)**: Adds acoustic power without wave interference.
+  - **In-Phase (Global Cancel - Fast)**: A fast approximation model for phase cancellation.
+  - **In-Phase (True Complex Field - Experimental)**: The ultimate physics engine. It synthesizes the exact complex field (real + imaginary parts) across the entire 3D space, perfectly reproducing the spatial warping of wave nodes when subwoofers are placed asymmetrically. Please note that this mode is experimental, and its practicality cannot be guaranteed.
+- **Customizable Wall Reflections**: Fine-tune the reflection coefficient (0.0 to 1.0) for all six boundaries (walls, floor, ceiling).
 
-1. Clone this repository or download the files.
-2. Install the required libraries:
+## 🚀 Operation Modes
+
+1. **🎛️ Layout Placement (Ultra-fast)**: Quickly drag and drop (via sliders) speakers and mics. Provides instantaneous 1D frequency response graphs.
+2. **🌊 Standing Wave Viz (Current Setup)**: Renders the full 3D volumetric tensor of sound pressure based on your layout, allowing you to "play" the animation across frequencies.
+3. **📐 Room Bare Specs (Rigid/Corner)**: A baseline mode simulating a perfectly rigid room (Reflection = 1.0) with a corner-placed source to visualize the raw, pure acoustic properties of the room shape.
+
+## 🛠️ Installation & Usage
+
+### Prerequisites
+- Python 3.7+
+- `streamlit`
+- `numpy`
+- `plotly`
+
+### Running the App
+1. Clone the repository.
+2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install streamlit numpy plotly
    ```
-
-## How to Run
-
-Run the following command in your terminal:
-```bash
-streamlit run Statnding_Wave_Viewer.py
-```
+3. Run the Streamlit app:
+   ```bash
+   streamlit run Standing_Wave_Viewer.py
+   ```
 Then, open the provided Local URL (usually `http://localhost:8501`) in your web browser.

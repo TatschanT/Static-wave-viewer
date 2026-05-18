@@ -24,8 +24,8 @@ class SimConfig:
     freqs_1d: np.ndarray
     freqs_3d: np.ndarray
 
-st.set_page_config(page_title="Standing Wave Viewer V0.7 (Golden Master)", layout="wide")
-st.title("🎵 Standing Wave Viewer V0.7 (Unified Calculation Modes)")
+st.set_page_config(page_title="Standing Wave Viewer V0.7.1", layout="wide")
+st.title("🎵 Standing Wave Viewer")
 
 # ==========================================
 # UI: Sidebar (Common Settings)
@@ -42,10 +42,10 @@ if num_sources == 2:
     corr_mode = st.sidebar.radio("L/R Bass Signal Correlation", [
         "🔀 Uncorrelated (Independent Power Sum)",
         "🔗 In-Phase (Global Cancel - Fast)",
-        "🌊 In-Phase (True Complex Field - Realistic)"
+        "🌊 In-Phase (True Complex Field - experimental)"
     ], help="Uncorrelated: adds power. Global Cancel: Fast approximation for cancel. True Complex: Real-world spatial interference.")
 else:
-    # モノラルモード時は計算負荷の軽い近似モード（パワー加算相当）をデフォルトにする
+    # In mono mode, set the low-computational-load approximation mode as the default
     corr_mode = "Mono (Approx)"
 
 mode = st.sidebar.radio("Operation Mode", [
@@ -142,7 +142,6 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
     tensor_1d = np.zeros(len(FREQS_1D))
 
     if "True Complex Field" in corr_mode:
-        # V0.6 複素数合成
         for i, f_query in enumerate(FREQS_1D):
             P_complex_1 = 0j
             P_complex_2 = 0j
@@ -166,10 +165,9 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                             psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
                             P_complex_2 += psi2 * rec_psi * res_complex
             
-            # ステレオ完全複素合成時は In-Phase
             tensor_1d[i] = np.abs(P_complex_1 + P_complex_2)
     else:
-        # V0.5 近似（Mono / Uncorrelated / Global Cancel）
+        # Mono / Uncorrelated / Global Cancel
         for nx in range(max_nx):
             for ny in range(max_ny):
                 for nz in range(max_nz):
@@ -293,9 +291,9 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
     trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
     with col1:
-        fig_layout = go.Figure(data=[draw_room_wireframe(Lx, Ly, Lz), trace_spk, trace_mic])
+        fig_layout = go.Figure(data=[draw_room_wireframe(room.Lx, room.Ly, room.Lz), trace_spk, trace_mic])
         fig_layout.update_layout(
-            scene=dict(xaxis=dict(range=[-0.5, Lx+0.5]), yaxis=dict(range=[-0.5, Ly+0.5]), zaxis=dict(range=[-0.5, Lz+0.5]), aspectmode='data'),
+        scene=dict(xaxis=dict(range=[-0.5, room.Lx+0.5]), yaxis=dict(range=[-0.5, room.Ly+0.5]), zaxis=dict(range=[-0.5, room.Lz+0.5]), aspectmode='data'),
             margin=dict(l=0, r=0, b=0, t=30), height=500, title="3D Equipment Layout"
         )
         st.plotly_chart(fig_layout, width='stretch')
@@ -337,7 +335,7 @@ else:
     global_max = np.percentile(tensor_abs, 98)
 
     fig_vol = go.Figure()
-    fig_vol.add_trace(draw_room_wireframe(Lx, Ly, Lz))
+    fig_vol.add_trace(draw_room_wireframe(eff_room.Lx, eff_room.Ly, eff_room.Lz))
     fig_vol.add_trace(trace_spk)
     fig_vol.add_trace(trace_mic)
 
