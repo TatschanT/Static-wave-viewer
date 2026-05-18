@@ -39,3 +39,8 @@ Standing Wave Viewer is an advanced 3D acoustic simulation and visualization too
    streamlit run Standing_Wave_Viewer.py
    ```
 Then, open the provided Local URL (usually `http://localhost:8501`) in your web browser.
+
+Disclaimer/免責事項
+
+This tool was created by an audio enthusiast for personal use and prototyping. I'm not a professional acoustic engineer, but I wanted to visualize standing waves intuitively. Feedback, corrections, and contributions to improve the physics model are highly welcome!
+個人的な用途とプロトタイプのためにオーディオ愛好家が作成したツールです。私はプロの音響エンジニアではありませんが、定在波を直感的に可視化したかったのです。物理モデルを改善するためのフィードバックや修正、貢献は大歓迎です！
