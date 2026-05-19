@@ -23,6 +23,17 @@ class SimConfig:
     speed_of_sound: float
     freqs_1d: np.ndarray
     freqs_3d: np.ndarray
+    
+# ==========================================
+# Default Application State
+# ==========================================
+DEFAULT_STATE = {
+    "Lx": 3.5, "Ly": 2.6, "Lz": 2.4,
+    "spk_x": 0.5, "spk_y": 0.5, "spk_z": 0.5,
+    "spk2_x": 3.0, "spk2_y": 0.5, "spk2_z": 0.5,
+    "mic_x": 1.75, "mic_y": 1.3, "mic_z": 1.2,
+    "R": 0.80  # Default reflection
+}
 
 st.set_page_config(page_title="Standing Wave Viewer V0.7.1", layout="wide")
 st.title("🎵 Standing Wave Viewer")
@@ -55,33 +66,33 @@ mode = st.sidebar.radio("Operation Mode", [
 ])
 
 st.sidebar.header("Room Dimensions (m)")
-Lx = st.sidebar.slider("Width (Lx)", 2.0, 10.0, 3.5, 0.1)
-Ly = st.sidebar.slider("Depth (Ly)", 2.0, 10.0, 2.6, 0.1)
-Lz = st.sidebar.slider("Height (Lz)", 2.0, 5.0, 2.4, 0.1)
+Lx = st.sidebar.slider("Width (Lx)", 1.0, 10.0, DEFAULT_STATE["Lx"], 0.02)
+Ly = st.sidebar.slider("Depth (Ly)", 1.0, 10.0, DEFAULT_STATE["Ly"], 0.02)
+Lz = st.sidebar.slider("Height (Lz)", 1.0, 5.0, DEFAULT_STATE["Lz"], 0.02)
 
 st.sidebar.header("Equipment Positions (m)")
-spk_x = st.sidebar.slider("Spk 1 (L) X" if num_sources==2 else "Speaker X", 0.0, Lx, 0.5, 0.01)
-spk_y = st.sidebar.slider("Spk 1 (L) Y" if num_sources==2 else "Speaker Y", 0.0, Ly, 0.5, 0.01)
-spk_z = st.sidebar.slider("Spk 1 (L) Z" if num_sources==2 else "Speaker Z", 0.0, Lz, 0.5, 0.01)
+spk_x = st.sidebar.slider("Spk 1 (L) X" if num_sources==2 else "Speaker X", 0.0, Lx, DEFAULT_STATE["spk_x"], 0.01)
+spk_y = st.sidebar.slider("Spk 1 (L) Y" if num_sources==2 else "Speaker Y", 0.0, Ly, DEFAULT_STATE["spk_y"], 0.01)
+spk_z = st.sidebar.slider("Spk 1 (L) Z" if num_sources==2 else "Speaker Z", 0.0, Lz, DEFAULT_STATE["spk_z"], 0.01)
 
 if num_sources == 2:
-    spk2_x = st.sidebar.slider("Spk 2 (R) X", 0.0, Lx, Lx - 0.5, 0.01)
-    spk2_y = st.sidebar.slider("Spk 2 (R) Y", 0.0, Ly, 0.5, 0.01)
-    spk2_z = st.sidebar.slider("Spk 2 (R) Z", 0.0, Lz, 0.5, 0.01)
+    spk2_x = st.sidebar.slider("Spk 2 (R) X", 0.0, Lx, DEFAULT_STATE["spk2_x"], 0.01)
+    spk2_y = st.sidebar.slider("Spk 2 (R) Y", 0.0, Ly, DEFAULT_STATE["spk2_y"], 0.01)
+    spk2_z = st.sidebar.slider("Spk 2 (R) Z", 0.0, Lz, DEFAULT_STATE["spk2_z"], 0.01)
 else:
     spk2_x, spk2_y, spk2_z = spk_x, spk_y, spk_z
 
-mic_x = st.sidebar.slider("Mic X", 0.0, Lx, Lx/2, 0.01)
-mic_y = st.sidebar.slider("Mic Y", 0.0, Ly, Ly/2, 0.01)
-mic_z = st.sidebar.slider("Mic Z", 0.0, Lz, Lz/2, 0.01)
+mic_x = st.sidebar.slider("Mic X", 0.0, Lx, DEFAULT_STATE["mic_x"], 0.01)
+mic_y = st.sidebar.slider("Mic Y", 0.0, Ly, DEFAULT_STATE["mic_y"], 0.01)
+mic_z = st.sidebar.slider("Mic Z", 0.0, Lz, DEFAULT_STATE["mic_z"], 0.01)
 
 with st.sidebar.expander("🧱 Wall Reflection Coefficients"):
-    Rx1 = st.slider("Left Wall (X=0)", 0.0, 1.0, 0.80, 0.05)
-    Rx2 = st.slider("Right Wall (X=Lx)", 0.0, 1.0, 0.80, 0.05)
-    Ry1 = st.slider("Front Wall (Y=0)", 0.0, 1.0, 0.80, 0.05)
-    Ry2 = st.slider("Back Wall (Y=Ly)", 0.0, 1.0, 0.80, 0.05)
-    Rz1 = st.slider("Floor (Z=0)", 0.0, 1.0, 0.80, 0.05)
-    Rz2 = st.slider("Ceiling (Z=Lz)", 0.0, 1.0, 0.80, 0.05)
+    Rx1 = st.slider("Left Wall (X=0)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
+    Rx2 = st.slider("Right Wall (X=Lx)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
+    Ry1 = st.slider("Front Wall (Y=0)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
+    Ry2 = st.slider("Back Wall (Y=Ly)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
+    Rz1 = st.slider("Floor (Z=0)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
+    Rz2 = st.slider("Ceiling (Z=Lz)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
 
 Rx = (Rx1 + Rx2) / 2.0
 Ry = (Ry1 + Ry2) / 2.0
@@ -164,7 +175,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                         if num_src == 2:
                             psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
                             P_complex_2 += psi2 * rec_psi * res_complex
-            
+
             tensor_1d[i] = np.abs(P_complex_1 + P_complex_2)
     else:
         # Mono / Uncorrelated / Global Cancel
@@ -365,6 +376,7 @@ else:
     fig_vol.frames = frames
 
     fig_vol.update_layout(
+        uirevision="constant",
         scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z', aspectmode='data'),
         margin=dict(l=0, r=0, b=0, t=30), height=700, showlegend=False,
         updatemenus=[dict(
