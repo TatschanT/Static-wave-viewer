@@ -35,7 +35,7 @@ DEFAULT_STATE = {
     "R": 0.80  # Default reflection
 }
 
-st.set_page_config(page_title="Standing Wave Viewer V0.7.1", layout="wide")
+st.set_page_config(page_title="Standing Wave Viewer V0.7.2", layout="wide")
 st.title("🎵 Standing Wave Viewer")
 
 # ==========================================
@@ -71,17 +71,73 @@ Ly = st.sidebar.slider("Depth (Ly)", 1.0, 10.0, DEFAULT_STATE["Ly"], 0.02)
 Lz = st.sidebar.slider("Height (Lz)", 1.0, 5.0, DEFAULT_STATE["Lz"], 0.02)
 
 st.sidebar.header("Equipment Positions (m)")
-spk_x = st.sidebar.slider("Spk 1 (L) X" if num_sources==2 else "Speaker X", 0.0, Lx, DEFAULT_STATE["spk_x"], 0.01)
-spk_y = st.sidebar.slider("Spk 1 (L) Y" if num_sources==2 else "Speaker Y", 0.0, Ly, DEFAULT_STATE["spk_y"], 0.01)
-spk_z = st.sidebar.slider("Spk 1 (L) Z" if num_sources==2 else "Speaker Z", 0.0, Lz, DEFAULT_STATE["spk_z"], 0.01)
+
+# --- セッションステートの初期化 ---
+if "spk2_x_state" not in st.session_state:
+    st.session_state["spk2_x_state"] = DEFAULT_STATE["spk2_x"]
+if "spk2_y_state" not in st.session_state:
+    st.session_state["spk2_y_state"] = DEFAULT_STATE["spk2_y"]
+if "spk2_z_state" not in st.session_state:
+    st.session_state["spk2_z_state"] = DEFAULT_STATE["spk2_z"]
+if "is_linked" not in st.session_state:
+    st.session_state["is_linked"] = True  # ← 確実にTrueにする
 
 if num_sources == 2:
-    spk2_x = st.sidebar.slider("Spk 2 (R) X", 0.0, Lx, DEFAULT_STATE["spk2_x"], 0.01)
-    spk2_y = st.sidebar.slider("Spk 2 (R) Y", 0.0, Ly, DEFAULT_STATE["spk2_y"], 0.01)
-    spk2_z = st.sidebar.slider("Spk 2 (R) Z", 0.0, Lz, DEFAULT_STATE["spk2_z"], 0.01)
+    # トグルスイッチ（keyへの直接バインディングを避け、valueで明示的に渡す）
+    link_lr = st.sidebar.checkbox("🔗 L/R Symmetry Link", value=st.session_state["is_linked"], help="Automatically mirror Spk 2 based on Spk 1's position")
+    # ユーザーが操作した最新の状態を保存
+    st.session_state["is_linked"] = link_lr
+    
+    st.sidebar.markdown("**Spk 1 (L)**")
+    
+    # リンクONの時はXの最大値をLxの半分(Lx/2)に制限する
+    max_x_spk1 = Lx / 2.0 if link_lr else Lx
+    
+    # スライダーの初期値（デフォルトはDEFAULT_STATE、既に操作されていればその値）
+    current_spk_x = st.session_state.get("s1x", DEFAULT_STATE["spk_x"])
+    
+    # もし制限（半分）を超えていたら強制的に収める
+    if current_spk_x > max_x_spk1:
+        current_spk_x = max_x_spk1
+        
+    spk_x = st.sidebar.slider("X", 0.0, float(max_x_spk1), float(current_spk_x), 0.01, key="s1x")
+    spk_y = st.sidebar.slider("Y", 0.0, Ly, DEFAULT_STATE["spk_y"], 0.01, key="s1y")
+    spk_z = st.sidebar.slider("Z", 0.0, Lz, DEFAULT_STATE["spk_z"], 0.01, key="s1z")
+    
+    if link_lr:
+        # リンクON：UI上は非表示にし、内部的に逆算値をセット＆セッションに保存
+        st.sidebar.info(f"👉 **Spk 2 (R)** is locked symmetrically at:\nX: {Lx - spk_x:.2f}m, Y: {spk_y:.2f}m, Z: {spk_z:.2f}m")
+        spk2_x = float(Lx - spk_x)
+        spk2_y = float(spk_y)
+        spk2_z = float(spk_z)
+        # 次にリンクを切った時のために現在地をセーブしておく
+        st.session_state["spk2_x_state"] = spk2_x
+        st.session_state["spk2_y_state"] = spk2_y
+        st.session_state["spk2_z_state"] = spk2_z
+    else:
+        # リンクOFF：スライダーを表示（値はセッションステートから引き継ぐ）
+        st.sidebar.markdown("**Spk 2 (R)**")
+        
+        # 安全装置：セッションステートの値がLxを超えていたらLxに収める
+        safe_spk2_x = min(st.session_state["spk2_x_state"], Lx)
+        
+        spk2_x = st.sidebar.slider("X", 0.0, Lx, float(safe_spk2_x), 0.01, key="s2x")
+        spk2_y = st.sidebar.slider("Y", 0.0, Ly, st.session_state["spk2_y_state"], 0.01, key="s2y")
+        spk2_z = st.sidebar.slider("Z", 0.0, Lz, st.session_state["spk2_z_state"], 0.01, key="s2z")
+        
+        # ユーザーがスライダーを動かした値でセッションステートを更新
+        st.session_state["spk2_x_state"] = spk2_x
+        st.session_state["spk2_y_state"] = spk2_y
+        st.session_state["spk2_z_state"] = spk2_z
 else:
+    # モノラルモード
+    spk_x = st.sidebar.slider("Speaker X", 0.0, Lx, DEFAULT_STATE["spk_x"], 0.01)
+    spk_y = st.sidebar.slider("Speaker Y", 0.0, Ly, DEFAULT_STATE["spk_y"], 0.01)
+    spk_z = st.sidebar.slider("Speaker Z", 0.0, Lz, DEFAULT_STATE["spk_z"], 0.01)
     spk2_x, spk2_y, spk2_z = spk_x, spk_y, spk_z
 
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Microphone Position**")
 mic_x = st.sidebar.slider("Mic X", 0.0, Lx, DEFAULT_STATE["mic_x"], 0.01)
 mic_y = st.sidebar.slider("Mic Y", 0.0, Ly, DEFAULT_STATE["mic_y"], 0.01)
 mic_z = st.sidebar.slider("Mic Z", 0.0, Lz, DEFAULT_STATE["mic_z"], 0.01)

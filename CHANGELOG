@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V0.7.2] - 2026-05-19
+### Added
+- **Default State Externalization**: Extracted all hardcoded initial UI values into a single `DEFAULT_STATE` dictionary, paving the way for future JSON save/load functionality.
+- **Dynamic L/R Symmetry Link**: Introduced a toggle switch for stereo mode to automatically mirror Speaker 2's position based on Speaker 1.
+- **Smart UI Space Management**: Dynamically hides Speaker 2's sliders when the symmetry link is active to save vertical sidebar space and prevent state conflicts.
+- **State Persistence on Unlink**: Implemented a session state logic that seamlessly preserves Speaker 2's calculated position when the symmetry link is toggled off, allowing the user to resume manual adjustments from that exact point.
+- **Dynamic Slider Bounds**: Added a safety constraint that automatically limits Speaker 1's maximum X-axis value to half of the room width (`Lx / 2.0`) when the symmetry link is active, preventing Speaker 2 from exceeding the room dimensions.
+
+### Changed
+- **Increased Room Dimension Precision**: Lowered the minimum room dimensions (Lx, Ly, Lz) to 1.0m and increased slider precision to 0.02m steps for finer adjustments.
+
 ## [V0.7.1] - 2026-05-18
 ### Refactored
 - **Introduced Dataclasses**: Implemented `@dataclass` for `RoomConfig`, `Position`, and `SimConfig` to structure application state and configuration parameters.
