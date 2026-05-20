@@ -36,12 +36,12 @@ DEFAULT_STATE = {
 }
 
 st.set_page_config(page_title="Standing Wave Viewer V0.7.3", layout="wide")
-st.title("🎵 Standing Wave Viewer")
 
 # ==========================================
 # UI: Sidebar (Common Settings)
 # ==========================================
-st.sidebar.title("Control Panel")
+st.sidebar.title("🎵 Standing Wave Viewer")
+st.sidebar.markdown("Control Panel")
 
 source_mode = st.sidebar.radio("Sound Source Setup", [
     "🔊 1 Source (Mono)",
