@@ -65,6 +65,11 @@ mode = st.sidebar.radio("Operation Mode", [
     "📐 3. Room Bare Specs (Rigid/Corner)"
 ])
 
+# Resolution Toggle
+st.sidebar.markdown("---")
+high_res = st.sidebar.toggle("High Resolution Mode (Slower)", value=False, help="Enable 32x32x32 grid and 2Hz steps. Default is 24x24x24 grid and 5Hz steps.")
+
+
 st.sidebar.header("Room Dimensions (m)")
 Lx = st.sidebar.slider("Width (Lx)", 1.0, 10.0, DEFAULT_STATE["Lx"], 0.02)
 Ly = st.sidebar.slider("Depth (Ly)", 1.0, 10.0, DEFAULT_STATE["Ly"], 0.02)
@@ -157,9 +162,16 @@ Rz = (Rz1 + Rz2) / 2.0
 # ==========================================
 # Physics Calculation Engine
 # ==========================================
+# Global constants - apply toggle settings
 SPEED_OF_SOUND = 343.0
 FREQS_1D = np.arange(20, 201, 1)
-FREQS_3D = np.arange(20, 201, 2)
+
+if high_res:
+    FREQS_3D = np.arange(20, 201, 2)
+    grid_size = 32
+else:
+    FREQS_3D = np.arange(20, 205, 5)
+    grid_size = 24
 
 # Instantiate configuration objects
 room = RoomConfig(Lx=Lx, Ly=Ly, Lz=Lz, Rx=Rx, Ry=Ry, Rz=Rz)
@@ -266,7 +278,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
     return f_response_db
 
 @st.cache_data(show_spinner="Calculating spatial tensor...")
-def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src: int, corr_mode: str, config: SimConfig):
+def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src: int, corr_mode: str, config: SimConfig, grid_size: int = 32):
     # Unpack variables to keep existing logic intact
     Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
     Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
@@ -274,9 +286,9 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
     sx2, sy2, sz2 = spk2.x, spk2.y, spk2.z
     SPEED_OF_SOUND = config.speed_of_sound
     FREQS_3D = config.freqs_3d
-    x = np.linspace(0, Lx, 32)
-    y = np.linspace(0, Ly, 32)
-    z = np.linspace(0, Lz, 32)
+    x = np.linspace(0, Lx, grid_size)
+    y = np.linspace(0, Ly, grid_size)
+    z = np.linspace(0, Lz, grid_size)
     X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
 
     tensor = np.zeros((len(FREQS_3D), len(x), len(y), len(z)))
@@ -397,7 +409,7 @@ else:
         trace_spk = go.Scatter3d(x=spk_xs, y=spk_ys, z=spk_zs, mode='markers', marker=dict(size=8, color='blue', symbol='square', line=dict(color='white', width=2)), name="Speaker(s)")
         trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
-    X_flat, Y_flat, Z_flat, tensor_abs = compute_tensor_3d(eff_room, eff_spk1, eff_spk2, eff_num_sources, eff_corr, sim_config)
+    X_flat, Y_flat, Z_flat, tensor_abs = compute_tensor_3d(eff_room, eff_spk1, eff_spk2, eff_num_sources, eff_corr, sim_config, grid_size)
     global_min = np.min(tensor_abs)
     global_max = np.percentile(tensor_abs, 98)
 
