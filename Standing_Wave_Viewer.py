@@ -35,7 +35,7 @@ DEFAULT_STATE = {
     "R": 0.80  # Default reflection
 }
 
-st.set_page_config(page_title="Standing Wave Viewer V0.7.2", layout="wide")
+st.set_page_config(page_title="Standing Wave Viewer V0.7.3", layout="wide")
 st.title("🎵 Standing Wave Viewer")
 
 # ==========================================
@@ -68,6 +68,8 @@ mode = st.sidebar.radio("Operation Mode", [
 # Resolution Toggle
 st.sidebar.markdown("---")
 high_res = st.sidebar.toggle("High Resolution Mode (Slower)", value=False, help="Enable 32x32x32 grid and 2Hz steps. Default is 24x24x24 grid and 5Hz steps.")
+large_view = st.sidebar.toggle("Large 3D View", value=False, help="Increase the 3D graph height for high-resolution displays.")
+chart_height = 800 if large_view else 500
 
 
 st.sidebar.header("Room Dimensions (m)")
@@ -373,7 +375,7 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
         fig_layout = go.Figure(data=[draw_room_wireframe(room.Lx, room.Ly, room.Lz), trace_spk, trace_mic])
         fig_layout.update_layout(
         scene=dict(xaxis=dict(range=[-0.5, room.Lx+0.5]), yaxis=dict(range=[-0.5, room.Ly+0.5]), zaxis=dict(range=[-0.5, room.Lz+0.5]), aspectmode='data'),
-            margin=dict(l=0, r=0, b=0, t=30), height=500, title="3D Equipment Layout"
+            margin=dict(l=0, r=0, b=0, t=30), height=chart_height, title="3D Equipment Layout"
         )
         st.plotly_chart(fig_layout, width='stretch')
 
@@ -383,7 +385,7 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
         fig_f.update_layout(
             xaxis_title="Frequency (Hz)", yaxis_title="Relative SPL (dB)",
             yaxis=dict(range=[-25, 2]),
-            margin=dict(l=0, r=0, b=0, t=30), height=500, title="Frequency Response (Max Peak = 0dB)"
+            margin=dict(l=0, r=0, b=0, t=30), height=chart_height, title="Frequency Response (Max Peak = 0dB)"
         )
         st.plotly_chart(fig_f, width='stretch')
 
@@ -446,10 +448,29 @@ else:
     fig_vol.update_layout(
         uirevision="constant",
         scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z', aspectmode='data'),
-        margin=dict(l=0, r=0, b=0, t=30), height=700, showlegend=False,
+        margin=dict(l=0, r=0, b=0, t=30), height=chart_height, showlegend=False,
         updatemenus=[dict(
-            type="buttons", x=0.05, y=0,
-            buttons=[dict(label="Play", method="animate", args=[None, dict(frame=dict(duration=500, redraw=True), transition=dict(duration=0), fromcurrent=True)])]
+            type="buttons", 
+            x=0.05, y=0,
+            direction="left",  # ボタンを横に並べる
+            buttons=[
+                # Play ボタン
+                dict(
+                    label="Play", 
+                    method="animate", 
+                    args=[None, dict(frame=dict(duration=500, redraw=True), 
+                                    transition=dict(duration=0), 
+                                    fromcurrent=True)]
+                ),
+                # Pause/Stop ボタン
+                dict(
+                    label="Pause", 
+                    method="animate", 
+                    args=[[None], dict(frame=dict(duration=0, redraw=False), 
+                                      mode="immediate", 
+                                      transition=dict(duration=0))]
+                )
+            ]
         )],
         sliders=[dict(
             active=0, yanchor="top", xanchor="left", currentvalue=dict(font=dict(size=16), prefix="Frequency: ", suffix=" Hz"),

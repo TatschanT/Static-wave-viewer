@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-05-20
+
+### Added
+- "High Resolution Mode" toggle in the sidebar to enable 32x32x32 grid and 2Hz steps for high-spec machines.
+- "Large 3D View" toggle in the sidebar to dynamically increase the 3D plot height up to 800px.
+- "Pause" button next to the "Play" button in the 3D viewer to immediately interrupt the frequency sweep animation and prevent browser freezing.
+
+### Changed
+- Reduced the default 3D volume rendering grid size to 24x24x24 with 5Hz steps to lower memory consumption and improve performance on laptops.
+- Decreased the default 3D plot height from 700px to 500px to ensure the 3D canvas and frequency slider fit perfectly within standard laptop screens (e.g., 1080p) without vertical scrolling.
+
 ## [V0.7.2] - 2026-05-19
 ### Added
 - **Default State Externalization**: Extracted all hardcoded initial UI values into a single `DEFAULT_STATE` dictionary, paving the way for future JSON save/load functionality.
