@@ -5,7 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.3] - 2026-05-20
+##　[V0.8.1] - 2026-05-21
+### Added
+- Spatial Smoothing Feature: Introduced a toggle switch in "1. Layout Placement" mode to enable 3x3x3 spatial smoothing (±10cm offsets, 27 points) around the microphone position. This simulates real-world acoustic measurements by averaging out extreme local dips and providing a more perceptually accurate frequency response.
+
+- Vectorized Core Processing: Implemented advanced NumPy vectorization in compute_f_response_1d to calculate multiple microphone positions simultaneously, ensuring that the 27-point spatial smoothing maintains ultra-fast performance without noticeable lag.
+
+### Refactored
+- Code Standardization & Documentation: Completely overhauled the codebase documentation. Removed outdated/cluttered development comments and introduced professional, standard English docstrings for all classes and functions.
+
+- Architectural Cleanup: Grouped code into logical blocks (Data Models, Application State, UI Setup, Core Physics Engine, Rendering) with clear structural comments, greatly enhancing code readability and maintainability for future expansions (e.g., desktop/near-field acoustic models).
+
+## [V0.7.3] - 2026-05-20
 
 ### Added
 - "High Resolution Mode" toggle in the sidebar to enable 32x32x32 grid and 2Hz steps for high-spec machines.
@@ -35,12 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Helper Function Modularization**: Updated physics helper functions (`get_max_modes`, `calc_gamma`) to accept `RoomConfig` and `SimConfig`, laying the groundwork for a standalone `PhysicsEngine` module.
 - **UI and Logic Separation**: Fully decoupled the rendering section from raw UI sidebar variables by mapping drawing functions (e.g., `draw_room_wireframe`) to the newly created dataclass properties (`room.Lx`, `eff_room.Lx`, etc.).
 
-## [0.7.0] - 2026-05-18
+## [V0.7.0] - 2026-05-18
 ### Added
 - Stereo mode (two sound source)
 - Calcuration mode selection in the stereo mode. True complex field calcuration mode is experimental.
 
-## [0.2.0] - 2026-05-17
+## [V0.2.0] - 2026-05-17
 ### Added
 - High-precision (1cm) slider steps for accurate equipment placement.
 - Improved frequency resolution in 1D mode to 1Hz steps (20Hz-200Hz).
@@ -50,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed 3D visualization grid resolution to 32x32x32 to maintain consistent performance regardless of room size.
 - Changed Volume Rendering surface_count from 15 to 12 for performance optimization.
 
-## [0.1.0] - 2026-05-16
+## [V0.1.0] - 2026-05-16
 ### Added
 - Initial release of the Standing Wave Viewer.
 - 3D Volume rendering of room standing waves.
