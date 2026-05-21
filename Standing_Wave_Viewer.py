@@ -35,7 +35,7 @@ DEFAULT_STATE = {
     "R": 0.80  # Default reflection
 }
 
-st.set_page_config(page_title="Standing Wave Viewer V0.7.3", layout="wide")
+st.set_page_config(page_title="Standing Wave Viewer V0.8.0", layout="wide")
 
 # ==========================================
 # UI: Sidebar (Common Settings)
@@ -209,46 +209,64 @@ def calc_gamma(nx, ny, nz, room: RoomConfig):
     return 3.0 + 40.0 * (1.0 - R_eff)
 
 @st.cache_data(show_spinner=False)
-def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic: Position, num_src: int, corr_mode: str, config: SimConfig):
+def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic: Position, num_src: int, corr_mode: str, config: SimConfig, smoothing: bool = False):
     # Unpack variables to keep existing logic intact
     Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
     Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
     sx, sy, sz = spk1.x, spk1.y, spk1.z
     sx2, sy2, sz2 = spk2.x, spk2.y, spk2.z
-    mx, my, mz = mic.x, mic.y, mic.z
     SPEED_OF_SOUND = config.speed_of_sound
     FREQS_1D = config.freqs_1d
 
+    # Smoothing用のマイク座標（±10cmの3x3x3 = 27点）を生成
+    if smoothing:
+        d_val = 0.1 
+        offsets = [-d_val, 0, d_val]
+        mic_positions = [(mic.x + dx, mic.y + dy, mic.z + dz) for dx in offsets for dy in offsets for dz in offsets]
+    else:
+        mic_positions = [(mic.x, mic.y, mic.z)]
+
+    num_mics = len(mic_positions)
+    # 部屋の外にはみ出さないようにクリップ
+    mxs = np.clip([p[0] for p in mic_positions], 0, Lx)
+    mys = np.clip([p[1] for p in mic_positions], 0, Ly)
+    mzs = np.clip([p[2] for p in mic_positions], 0, Lz)
+
     max_nx, max_ny, max_nz = get_max_modes(room, config)
-    tensor_1d = np.zeros(len(FREQS_1D))
 
     if "True Complex Field" in corr_mode:
-        for i, f_query in enumerate(FREQS_1D):
-            P_complex_1 = 0j
-            P_complex_2 = 0j
+        P_complex_1_mics = np.zeros((num_mics, len(FREQS_1D)), dtype=complex)
+        P_complex_2_mics = np.zeros((num_mics, len(FREQS_1D)), dtype=complex)
 
-            for nx in range(max_nx):
-                for ny in range(max_ny):
-                    for nz in range(max_nz):
-                        if nx == 0 and ny == 0 and nz == 0: continue
-                        fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
-                        if fn > 250: continue
+        for nx in range(max_nx):
+            for ny in range(max_ny):
+                for nz in range(max_nz):
+                    if nx == 0 and ny == 0 and nz == 0: continue
+                    fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
+                    if fn > 250: continue
 
-                        gamma = calc_gamma(nx, ny, nz, room)
+                    gamma = calc_gamma(nx, ny, nz, room)
+                    psi1 = get_psi(nx, sx, Lx, Rx) * get_psi(ny, sy, Ly, Ry) * get_psi(nz, sz, Lz, Rz)
+                    if num_src == 2:
+                        psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
+
+                    # 27点分のpsiを一度に計算
+                    rec_psis = np.array([get_psi(nx, m_x, Lx, Rx) * get_psi(ny, m_y, Ly, Ry) * get_psi(nz, m_z, Lz, Rz) for m_x, m_y, m_z in zip(mxs, mys, mzs)])
+
+                    for i, f_query in enumerate(FREQS_1D):
                         res_complex = (50.0 / fn) / ((f_query - fn) + 1j * gamma)
-
-                        psi1 = get_psi(nx, sx, Lx, Rx) * get_psi(ny, sy, Ly, Ry) * get_psi(nz, sz, Lz, Rz)
-                        rec_psi = get_psi(nx, mx, Lx, Rx) * get_psi(ny, my, Ly, Ry) * get_psi(nz, mz, Lz, Rz)
-
-                        P_complex_1 += psi1 * rec_psi * res_complex
-
+                        P_complex_1_mics[:, i] += psi1 * rec_psis * res_complex
                         if num_src == 2:
-                            psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
-                            P_complex_2 += psi2 * rec_psi * res_complex
+                            P_complex_2_mics[:, i] += psi2 * rec_psis * res_complex
 
-            tensor_1d[i] = np.abs(P_complex_1 + P_complex_2)
+        tensor_1d_mics = np.abs(P_complex_1_mics + P_complex_2_mics)
+        # 27点の音圧の二乗平均平方根（RMS）をとる
+        tensor_1d_avg = np.sqrt(np.mean(tensor_1d_mics ** 2, axis=0))
+
     else:
         # Mono / Uncorrelated / Global Cancel
+        tensor_1d_mics = np.zeros((num_mics, len(FREQS_1D)))
+
         for nx in range(max_nx):
             for ny in range(max_ny):
                 for nz in range(max_nz):
@@ -266,16 +284,19 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                     else:
                         exc = np.abs(psi1)
 
-                    rec = calc_shape(nx, mx, Lx, Rx) * calc_shape(ny, my, Ly, Ry) * calc_shape(nz, mz, Lz, Rz)
+                    # 27点分の形状関数を一度に計算
+                    recs = np.array([calc_shape(nx, m_x, Lx, Rx) * calc_shape(ny, m_y, Ly, Ry) * calc_shape(nz, m_z, Lz, Rz) for m_x, m_y, m_z in zip(mxs, mys, mzs)])
                     gamma = calc_gamma(nx, ny, nz, room)
 
                     for i, f in enumerate(FREQS_1D):
                         res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
-                        tensor_1d[i] += (exc * rec * res_amp) ** 2
+                        tensor_1d_mics[:, i] += (exc * recs * res_amp) ** 2
 
-        tensor_1d = np.sqrt(tensor_1d)
+        tensor_1d_mics = np.sqrt(tensor_1d_mics)
+        # 27点の音圧の二乗平均平方根（RMS）をとる
+        tensor_1d_avg = np.sqrt(np.mean(tensor_1d_mics ** 2, axis=0))
 
-    f_response_db = 20 * np.log10(np.clip(tensor_1d, 1e-10, None))
+    f_response_db = 20 * np.log10(np.clip(tensor_1d_avg, 1e-10, None))
     f_response_db = f_response_db - np.max(f_response_db)
     return f_response_db
 
@@ -365,7 +386,13 @@ else:
     spk_xs, spk_ys, spk_zs = [spk_x], [spk_y], [spk_z]
 
 if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
-    st.info("💡 **Layout Placement Mode**: Adjust coordinates.")
+    # ヘッダー領域を分割してトグルスイッチを配置
+    col_header1, col_header2 = st.columns([6, 4])
+    with col_header1:
+        st.info("💡 **Layout Placement Mode**: Adjust coordinates.")
+    with col_header2:
+        smoothing_on = st.toggle("Spatial Smoothing (3x3x3, ±10cm)", value=False, help="マイク周辺27点の応答を平均化して局所的なディップを和らげます。")
+
     col1, col2 = st.columns([5, 5])
 
     trace_spk = go.Scatter3d(x=spk_xs, y=spk_ys, z=spk_zs, mode='markers', marker=dict(size=8, color='blue', symbol='square', line=dict(color='white', width=2)), name="Speaker(s)")
@@ -374,13 +401,14 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
     with col1:
         fig_layout = go.Figure(data=[draw_room_wireframe(room.Lx, room.Ly, room.Lz), trace_spk, trace_mic])
         fig_layout.update_layout(
-        scene=dict(xaxis=dict(range=[-0.5, room.Lx+0.5]), yaxis=dict(range=[-0.5, room.Ly+0.5]), zaxis=dict(range=[-0.5, room.Lz+0.5]), aspectmode='data'),
+            scene=dict(xaxis=dict(range=[-0.5, room.Lx+0.5]), yaxis=dict(range=[-0.5, room.Ly+0.5]), zaxis=dict(range=[-0.5, room.Lz+0.5]), aspectmode='data'),
             margin=dict(l=0, r=0, b=0, t=30), height=chart_height, title="3D Equipment Layout"
         )
         st.plotly_chart(fig_layout, width='stretch')
 
     with col2:
-        f_response_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config)
+        # smoothing_on フラグを引数として渡す
+        f_response_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config, smoothing=smoothing_on)
         fig_f = go.Figure(data=[go.Scatter(x=FREQS_1D, y=f_response_db, mode='lines+markers', line=dict(color='red', width=2))])
         fig_f.update_layout(
             xaxis_title="Frequency (Hz)", yaxis_title="Relative SPL (dB)",
