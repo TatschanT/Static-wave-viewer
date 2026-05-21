@@ -3,14 +3,20 @@ import numpy as np
 import plotly.graph_objects as go
 from dataclasses import dataclass
 
+# ==========================================
+# Data Models
+# ==========================================
+
 @dataclass
 class Position:
+    """Represents a 3D spatial coordinate in meters."""
     x: float
     y: float
     z: float
 
 @dataclass
 class RoomConfig:
+    """Stores room dimensions and wall reflection coefficients."""
     Lx: float
     Ly: float
     Lz: float
@@ -20,26 +26,29 @@ class RoomConfig:
 
 @dataclass
 class SimConfig:
+    """Stores global simulation parameters and frequency arrays."""
     speed_of_sound: float
     freqs_1d: np.ndarray
     freqs_3d: np.ndarray
-    
+
 # ==========================================
-# Default Application State
+# Application State & Configuration
 # ==========================================
+
 DEFAULT_STATE = {
     "Lx": 3.5, "Ly": 2.6, "Lz": 2.4,
     "spk_x": 0.5, "spk_y": 0.5, "spk_z": 0.5,
     "spk2_x": 3.0, "spk2_y": 0.5, "spk2_z": 0.5,
     "mic_x": 1.75, "mic_y": 1.3, "mic_z": 1.2,
-    "R": 0.80  # Default reflection
+    "R": 0.80  # Default generic reflection coefficient
 }
 
-st.set_page_config(page_title="Standing Wave Viewer V0.8.0", layout="wide")
+st.set_page_config(page_title="Standing Wave Viewer V0.8.1", layout="wide")
 
 # ==========================================
-# UI: Sidebar (Common Settings)
+# UI Setup: Sidebar Controls
 # ==========================================
+
 st.sidebar.title("🎵 Standing Wave Viewer")
 st.sidebar.markdown("Control Panel")
 
@@ -56,7 +65,6 @@ if num_sources == 2:
         "🌊 In-Phase (True Complex Field - experimental)"
     ], help="Uncorrelated: adds power. Global Cancel: Fast approximation for cancel. True Complex: Real-world spatial interference.")
 else:
-    # In mono mode, set the low-computational-load approximation mode as the default
     corr_mode = "Mono (Approx)"
 
 mode = st.sidebar.radio("Operation Mode", [
@@ -65,12 +73,11 @@ mode = st.sidebar.radio("Operation Mode", [
     "📐 3. Room Bare Specs (Rigid/Corner)"
 ])
 
-# Resolution Toggle
+# Display resolution and view size toggles
 st.sidebar.markdown("---")
 high_res = st.sidebar.toggle("High Resolution Mode (Slower)", value=False, help="Enable 32x32x32 grid and 2Hz steps. Default is 24x24x24 grid and 5Hz steps.")
 large_view = st.sidebar.toggle("Large 3D View", value=False, help="Increase the 3D graph height for high-resolution displays.")
 chart_height = 800 if large_view else 500
-
 
 st.sidebar.header("Room Dimensions (m)")
 Lx = st.sidebar.slider("Width (Lx)", 1.0, 10.0, DEFAULT_STATE["Lx"], 0.02)
@@ -79,7 +86,7 @@ Lz = st.sidebar.slider("Height (Lz)", 1.0, 5.0, DEFAULT_STATE["Lz"], 0.02)
 
 st.sidebar.header("Equipment Positions (m)")
 
-# --- セッションステートの初期化 ---
+# Initialize session state for symmetric positioning
 if "spk2_x_state" not in st.session_state:
     st.session_state["spk2_x_state"] = DEFAULT_STATE["spk2_x"]
 if "spk2_y_state" not in st.session_state:
@@ -87,57 +94,44 @@ if "spk2_y_state" not in st.session_state:
 if "spk2_z_state" not in st.session_state:
     st.session_state["spk2_z_state"] = DEFAULT_STATE["spk2_z"]
 if "is_linked" not in st.session_state:
-    st.session_state["is_linked"] = True  # ← 確実にTrueにする
+    st.session_state["is_linked"] = True
 
 if num_sources == 2:
-    # トグルスイッチ（keyへの直接バインディングを避け、valueで明示的に渡す）
     link_lr = st.sidebar.checkbox("🔗 L/R Symmetry Link", value=st.session_state["is_linked"], help="Automatically mirror Spk 2 based on Spk 1's position")
-    # ユーザーが操作した最新の状態を保存
     st.session_state["is_linked"] = link_lr
-    
+
     st.sidebar.markdown("**Spk 1 (L)**")
-    
-    # リンクONの時はXの最大値をLxの半分(Lx/2)に制限する
+
+    # Constrain Spk 1 X coordinate if symmetry is linked
     max_x_spk1 = Lx / 2.0 if link_lr else Lx
-    
-    # スライダーの初期値（デフォルトはDEFAULT_STATE、既に操作されていればその値）
     current_spk_x = st.session_state.get("s1x", DEFAULT_STATE["spk_x"])
-    
-    # もし制限（半分）を超えていたら強制的に収める
     if current_spk_x > max_x_spk1:
         current_spk_x = max_x_spk1
-        
+
     spk_x = st.sidebar.slider("X", 0.0, float(max_x_spk1), float(current_spk_x), 0.01, key="s1x")
     spk_y = st.sidebar.slider("Y", 0.0, Ly, DEFAULT_STATE["spk_y"], 0.01, key="s1y")
     spk_z = st.sidebar.slider("Z", 0.0, Lz, DEFAULT_STATE["spk_z"], 0.01, key="s1z")
-    
+
     if link_lr:
-        # リンクON：UI上は非表示にし、内部的に逆算値をセット＆セッションに保存
+        # Calculate mirrored coordinates internally without displaying UI sliders for Spk 2
         st.sidebar.info(f"👉 **Spk 2 (R)** is locked symmetrically at:\nX: {Lx - spk_x:.2f}m, Y: {spk_y:.2f}m, Z: {spk_z:.2f}m")
         spk2_x = float(Lx - spk_x)
         spk2_y = float(spk_y)
         spk2_z = float(spk_z)
-        # 次にリンクを切った時のために現在地をセーブしておく
         st.session_state["spk2_x_state"] = spk2_x
         st.session_state["spk2_y_state"] = spk2_y
         st.session_state["spk2_z_state"] = spk2_z
     else:
-        # リンクOFF：スライダーを表示（値はセッションステートから引き継ぐ）
         st.sidebar.markdown("**Spk 2 (R)**")
-        
-        # 安全装置：セッションステートの値がLxを超えていたらLxに収める
         safe_spk2_x = min(st.session_state["spk2_x_state"], Lx)
-        
         spk2_x = st.sidebar.slider("X", 0.0, Lx, float(safe_spk2_x), 0.01, key="s2x")
         spk2_y = st.sidebar.slider("Y", 0.0, Ly, st.session_state["spk2_y_state"], 0.01, key="s2y")
         spk2_z = st.sidebar.slider("Z", 0.0, Lz, st.session_state["spk2_z_state"], 0.01, key="s2z")
         
-        # ユーザーがスライダーを動かした値でセッションステートを更新
         st.session_state["spk2_x_state"] = spk2_x
         st.session_state["spk2_y_state"] = spk2_y
         st.session_state["spk2_z_state"] = spk2_z
 else:
-    # モノラルモード
     spk_x = st.sidebar.slider("Speaker X", 0.0, Lx, DEFAULT_STATE["spk_x"], 0.01)
     spk_y = st.sidebar.slider("Speaker Y", 0.0, Ly, DEFAULT_STATE["spk_y"], 0.01)
     spk_z = st.sidebar.slider("Speaker Z", 0.0, Lz, DEFAULT_STATE["spk_z"], 0.01)
@@ -162,9 +156,9 @@ Ry = (Ry1 + Ry2) / 2.0
 Rz = (Rz1 + Rz2) / 2.0
 
 # ==========================================
-# Physics Calculation Engine
+# Physics Constants & Object Initialization
 # ==========================================
-# Global constants - apply toggle settings
+
 SPEED_OF_SOUND = 343.0
 FREQS_1D = np.arange(20, 201, 1)
 
@@ -175,42 +169,48 @@ else:
     FREQS_3D = np.arange(20, 205, 5)
     grid_size = 24
 
-# Instantiate configuration objects
 room = RoomConfig(Lx=Lx, Ly=Ly, Lz=Lz, Rx=Rx, Ry=Ry, Rz=Rz)
 spk1_pos = Position(x=spk_x, y=spk_y, z=spk_z)
 spk2_pos = Position(x=spk2_x, y=spk2_y, z=spk2_z)
 mic_pos = Position(x=mic_x, y=mic_y, z=mic_z)
-sim_config = SimConfig(
-    speed_of_sound=SPEED_OF_SOUND,
-    freqs_1d=FREQS_1D,
-    freqs_3d=FREQS_3D
-)
+sim_config = SimConfig(speed_of_sound=SPEED_OF_SOUND, freqs_1d=FREQS_1D, freqs_3d=FREQS_3D)
 
-def get_max_modes(room: RoomConfig, config: SimConfig):
+# ==========================================
+# Core Physics Engine
+# ==========================================
+
+def get_max_modes(room: RoomConfig, config: SimConfig) -> tuple:
+    """Calculates maximum modal indices (nx, ny, nz) based on room size and upper frequency limit."""
     return (
         int(2.0 * room.Lx * 250 / config.speed_of_sound) + 2,
         int(2.0 * room.Ly * 250 / config.speed_of_sound) + 2,
         int(2.0 * room.Lz * 250 / config.speed_of_sound) + 2
     )
 
-def calc_shape(n, pos, L, R):
+def calc_shape(n: int, pos: float, L: float, R: float) -> float:
+    """Calculates the 1D spatial mode shape function (amplitude scalar)."""
     if n == 0: return pos * 0.0 + 1.0
     return np.sqrt(1 + R**2 + 2 * R * np.cos(2 * n * np.pi * pos / L)) / (1 + R)
 
-def get_psi(n, pos, L, R):
+def get_psi(n: int, pos: float, L: float, R: float) -> complex:
+    """Calculates the 1D complex mode shape function, accounting for phase and wall absorption."""
     if n == 0: return 1.0 + 0j
     theta = n * np.pi * pos / L
     return np.cos(theta) - 1j * ((1 - R) / (1 + R)) * np.sin(theta)
 
-def calc_gamma(nx, ny, nz, room: RoomConfig):
+def calc_gamma(nx: int, ny: int, nz: int, room: RoomConfig) -> float:
+    """Calculates the modal damping factor (gamma) based on wall reflection coefficients."""
     n_sum = nx + ny + nz
     if n_sum == 0: return 5.0
     R_eff = (nx * room.Rx + ny * room.Ry + nz * room.Rz) / n_sum
     return 3.0 + 40.0 * (1.0 - R_eff)
 
 @st.cache_data(show_spinner=False)
-def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic: Position, num_src: int, corr_mode: str, config: SimConfig, smoothing: bool = False):
-    # Unpack variables to keep existing logic intact
+def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic: Position, num_src: int, corr_mode: str, config: SimConfig, smoothing: bool = False) -> np.ndarray:
+    """
+    Computes the 1D frequency response (SPL vs Frequency) at the microphone position(s).
+    Supports spatial smoothing by averaging over a 3x3x3 grid around the mic.
+    """
     Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
     Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
     sx, sy, sz = spk1.x, spk1.y, spk1.z
@@ -218,16 +218,14 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
     SPEED_OF_SOUND = config.speed_of_sound
     FREQS_1D = config.freqs_1d
 
-    # Smoothing用のマイク座標（±10cmの3x3x3 = 27点）を生成
     if smoothing:
-        d_val = 0.1 
+        d_val = 0.1
         offsets = [-d_val, 0, d_val]
         mic_positions = [(mic.x + dx, mic.y + dy, mic.z + dz) for dx in offsets for dy in offsets for dz in offsets]
     else:
         mic_positions = [(mic.x, mic.y, mic.z)]
 
     num_mics = len(mic_positions)
-    # 部屋の外にはみ出さないようにクリップ
     mxs = np.clip([p[0] for p in mic_positions], 0, Lx)
     mys = np.clip([p[1] for p in mic_positions], 0, Ly)
     mzs = np.clip([p[2] for p in mic_positions], 0, Lz)
@@ -250,7 +248,6 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                     if num_src == 2:
                         psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
 
-                    # 27点分のpsiを一度に計算
                     rec_psis = np.array([get_psi(nx, m_x, Lx, Rx) * get_psi(ny, m_y, Ly, Ry) * get_psi(nz, m_z, Lz, Rz) for m_x, m_y, m_z in zip(mxs, mys, mzs)])
 
                     for i, f_query in enumerate(FREQS_1D):
@@ -260,11 +257,9 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                             P_complex_2_mics[:, i] += psi2 * rec_psis * res_complex
 
         tensor_1d_mics = np.abs(P_complex_1_mics + P_complex_2_mics)
-        # 27点の音圧の二乗平均平方根（RMS）をとる
         tensor_1d_avg = np.sqrt(np.mean(tensor_1d_mics ** 2, axis=0))
 
     else:
-        # Mono / Uncorrelated / Global Cancel
         tensor_1d_mics = np.zeros((num_mics, len(FREQS_1D)))
 
         for nx in range(max_nx):
@@ -279,12 +274,11 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                         psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
                         if "Global Cancel" in corr_mode:
                             exc = np.abs(psi1 + psi2) / 2.0
-                        else: # Uncorrelated
+                        else:
                             exc = np.sqrt(np.abs(psi1)**2 + np.abs(psi2)**2) / 2.0
                     else:
                         exc = np.abs(psi1)
 
-                    # 27点分の形状関数を一度に計算
                     recs = np.array([calc_shape(nx, m_x, Lx, Rx) * calc_shape(ny, m_y, Ly, Ry) * calc_shape(nz, m_z, Lz, Rz) for m_x, m_y, m_z in zip(mxs, mys, mzs)])
                     gamma = calc_gamma(nx, ny, nz, room)
 
@@ -293,7 +287,6 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                         tensor_1d_mics[:, i] += (exc * recs * res_amp) ** 2
 
         tensor_1d_mics = np.sqrt(tensor_1d_mics)
-        # 27点の音圧の二乗平均平方根（RMS）をとる
         tensor_1d_avg = np.sqrt(np.mean(tensor_1d_mics ** 2, axis=0))
 
     f_response_db = 20 * np.log10(np.clip(tensor_1d_avg, 1e-10, None))
@@ -301,8 +294,11 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
     return f_response_db
 
 @st.cache_data(show_spinner="Calculating spatial tensor...")
-def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src: int, corr_mode: str, config: SimConfig, grid_size: int = 32):
-    # Unpack variables to keep existing logic intact
+def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src: int, corr_mode: str, config: SimConfig, grid_size: int = 32) -> tuple:
+    """
+    Computes the 3D spatial pressure field tensor across all requested frequencies.
+    Returns flattened meshgrid coordinates and the volumetric pressure magnitude tensor.
+    """
     Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
     Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
     sx, sy, sz = spk1.x, spk1.y, spk1.z
@@ -341,7 +337,10 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                             psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
                             P_complex_2 += psi2 * mode_complex * res_complex
 
-            tensor[i] = np.abs(P_complex_1 + P_complex_2)
+            if num_src == 2:
+                tensor[i] = np.abs(P_complex_1 + P_complex_2)
+            else:
+                tensor[i] = np.abs(P_complex_1)
     else:
         for nx in range(max_nx):
             for ny in range(max_ny):
@@ -355,7 +354,7 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                         psi2 = get_psi(nx, sx2, Lx, Rx) * get_psi(ny, sy2, Ly, Ry) * get_psi(nz, sz2, Lz, Rz)
                         if "Global Cancel" in corr_mode:
                             exc = np.abs(psi1 + psi2) / 2.0
-                        else: # Uncorrelated
+                        else:
                             exc = np.sqrt(np.abs(psi1)**2 + np.abs(psi2)**2) / 2.0
                     else:
                         exc = np.abs(psi1)
@@ -366,32 +365,37 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                     for i, f in enumerate(FREQS_3D):
                         res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
                         tensor[i] += (exc * mode_shape * res_amp) ** 2
-        
+
         tensor = np.sqrt(tensor)
 
     return X.flatten(), Y.flatten(), Z.flatten(), tensor
 
-def draw_room_wireframe(Lx, Ly, Lz):
+def draw_room_wireframe(Lx: float, Ly: float, Lz: float) -> go.Scatter3d:
+    """Generates Plotly trace for the room boundaries (wireframe cube)."""
     x_lines = [0, Lx, Lx, 0, 0, 0, Lx, Lx, 0, 0, None, Lx, Lx, None, Lx, Lx, None, 0, 0]
     y_lines = [0, 0, Ly, Ly, 0, 0, 0, Ly, Ly, 0, None, 0, 0, None, Ly, Ly, None, Ly, Ly]
     z_lines = [0, 0, 0, 0, 0, Lz, Lz, Lz, Lz, Lz, None, 0, Lz, None, 0, Lz, None, 0, Lz]
-    return go.Scatter3d(x=x_lines, y=y_lines, z=z_lines, mode='lines', line=dict(color='gray', width=3), name="Room", hoverinfo='skip')
+    return go.Scatter3d(
+        x=x_lines, y=y_lines, z=z_lines, 
+        mode='lines', line=dict(color='gray', width=3), 
+        name="Room Bounds", hoverinfo='skip'
+    )
 
 # ==========================================
 # Rendering
 # ==========================================
+
 if num_sources == 2:
     spk_xs, spk_ys, spk_zs = [spk_x, spk2_x], [spk_y, spk2_y], [spk_z, spk2_z]
 else:
     spk_xs, spk_ys, spk_zs = [spk_x], [spk_y], [spk_z]
 
 if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
-    # ヘッダー領域を分割してトグルスイッチを配置
     col_header1, col_header2 = st.columns([6, 4])
     with col_header1:
         st.info("💡 **Layout Placement Mode**: Adjust coordinates.")
     with col_header2:
-        smoothing_on = st.toggle("Spatial Smoothing (3x3x3, ±10cm)", value=False, help="マイク周辺27点の応答を平均化して局所的なディップを和らげます。")
+        smoothing_on = st.toggle("Spatial Smoothing (3x3x3, ±10cm)", value=False, help="Averages 27 points around mic to smooth out local dips.")
 
     col1, col2 = st.columns([5, 5])
 
@@ -407,7 +411,6 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
         st.plotly_chart(fig_layout, width='stretch')
 
     with col2:
-        # smoothing_on フラグを引数として渡す
         f_response_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config, smoothing=smoothing_on)
         fig_f = go.Figure(data=[go.Scatter(x=FREQS_1D, y=f_response_db, mode='lines+markers', line=dict(color='red', width=2))])
         fig_f.update_layout(
@@ -421,7 +424,6 @@ else:
     if mode == "📐 3. Room Bare Specs (Rigid/Corner)":
         eff_num_sources = 1
         eff_corr = "Mono"
-        # Create instances for rigid corner specs
         eff_spk1 = Position(0.0, 0.0, 0.0)
         eff_spk2 = Position(0.0, 0.0, 0.0)
         eff_room = RoomConfig(Lx, Ly, Lz, 1.0, 1.0, 1.0)
@@ -432,7 +434,6 @@ else:
     else:
         eff_num_sources = num_sources
         eff_corr = corr_mode
-        # Use current config objects
         eff_spk1 = spk1_pos
         eff_spk2 = spk2_pos
         eff_room = room
@@ -448,6 +449,7 @@ else:
     fig_vol.add_trace(trace_spk)
     fig_vol.add_trace(trace_mic)
 
+    # Initialize volumetric data
     initial_val = tensor_abs[0].flatten().astype(np.float32)
     fig_vol.add_trace(go.Volume(
         x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
@@ -457,6 +459,7 @@ else:
         caps=dict(x_show=False, y_show=False, z_show=False), name="Sound Pressure"
     ))
 
+    # Add animation frames for sweeping through frequencies
     frames = []
     for i, f in enumerate(FREQS_3D):
         val = tensor_abs[i].flatten().astype(np.float32)
@@ -478,25 +481,19 @@ else:
         scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z', aspectmode='data'),
         margin=dict(l=0, r=0, b=0, t=30), height=chart_height, showlegend=False,
         updatemenus=[dict(
-            type="buttons", 
+            type="buttons",
             x=0.05, y=0,
-            direction="left",  # ボタンを横に並べる
+            direction="left", 
             buttons=[
-                # Play ボタン
                 dict(
-                    label="Play", 
-                    method="animate", 
-                    args=[None, dict(frame=dict(duration=500, redraw=True), 
-                                    transition=dict(duration=0), 
-                                    fromcurrent=True)]
+                    label="Play",
+                    method="animate",
+                    args=[None, dict(frame=dict(duration=500, redraw=True), transition=dict(duration=0), fromcurrent=True)]
                 ),
-                # Pause/Stop ボタン
                 dict(
-                    label="Pause", 
-                    method="animate", 
-                    args=[[None], dict(frame=dict(duration=0, redraw=False), 
-                                      mode="immediate", 
-                                      transition=dict(duration=0))]
+                    label="Pause",
+                    method="animate",
+                    args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate", transition=dict(duration=0))]
                 )
             ]
         )],
