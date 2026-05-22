@@ -1,7 +1,5 @@
 ![Standing Wave Viewer image](images/SWVtitle.jpg)
 <span style="font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;">
-![Standing Wave Viewer image](images/SWVtitle.jpg)
-
 Standing Wave Viewer は、部屋の定在波（ルームモード）と低周波の干渉パターンを計算・可視化するための3D音響シミュレーションツールです。サブウーファーやスピーカーの最適な配置、およびリスニングポジションの決定に役立つでしょう。技術的な詳細については、/documents/Q_A_J.mdを参照してください。
 
 このプロジェクトは、個人的な欲求から始まったアマチュアの試みであり、プロの現場で使われるような、厳密な検証ツールを目指したものではありません。
