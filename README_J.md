@@ -1,8 +1,4 @@
-<style>
-  body {
-    font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
-  }
-</style>
+<span style="font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;">
 # 🎵 Standing Wave Viewer
 
 Standing Wave Viewer は、部屋の定在波（ルームモード）と低周波の干渉パターンを計算・可視化するための3D音響シミュレーションツールです。サブウーファーやスピーカーの最適な配置、およびリスニングポジションの決定に役立つでしょう。技術的な詳細については、/documents/Q_A_J.mdを参照してください。
@@ -55,3 +51,4 @@ Disclaimer/免責事項
 
 This tool was created by an audio enthusiast for personal use and prototyping. I'm not a professional acoustic engineer, but I wanted to visualize standing waves intuitively. Feedback, corrections, and contributions to improve the physics model are highly welcome!
 ただのオーディオ愛好家が、個人的に部屋の定在波を直感的に可視化するために作ったツールです（永遠のプロトタイプ）。私はプロの音響エンジニアではありませんので、正しさの保証はできません。物理モデルを改善するためのフィードバックや修正点がございましたら、ご教授いただけますと幸いです。
+</span>

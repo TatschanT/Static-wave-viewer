@@ -1,8 +1,4 @@
-<style>
-  body {
-    font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
-  }
-</style>
+<span style="font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;">
 以下の文章は、AIにStanding Wave Viewerの開発者としてインタビューに答えてもらったものを、再構成した文章です。ちなみに私自身は音響工学の専門家では決してありません！
 
 
@@ -103,6 +99,7 @@
 
 ***
 （開発者インタビュー了）
+</span>
 <span style="display:none">[^10][^11][^8][^9]</span>
 
 <div align="center">⁂</div>
