@@ -49,7 +49,7 @@ st.set_page_config(page_title="Standing Wave Viewer V0.8.1", layout="wide")
 # UI Setup: Sidebar Controls
 # ==========================================
 
-st.sidebar.title("🎵 Standing Wave Viewer")
+st.sidebar.image("images/SWVlogo.jpg", width='stretch')
 st.sidebar.markdown("Control Panel")
 
 source_mode = st.sidebar.radio("Sound Source Setup", [
