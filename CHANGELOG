@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V0.8.2] - 2026-05-22
+
+### Changed
+- **Dual-Trace Volumetric Rendering**: Split the 3D standing wave visualization into two distinct volume traces to simultaneously render "Valleys" (nodes) and "Peaks" (anti-nodes).
+- **Optimized Visibility Thresholds**: Adjusted rendering percentiles to explicitly show the 2%–25% range (deep valleys) and 75%–98% range (high peaks). The middle 50% of the pressure field is now rendered transparently, drastically reducing visual occlusion and making the internal room structure much easier to interpret.
+- **Color Scale & Minimum Normalization**: Updated `global_min` to use the 2nd percentile (`np.percentile(tensor_abs, 2)`) instead of the absolute mathematical minimum. This prevents the color scale and volume bounds from being heavily skewed by extreme singularity points (perfect phase cancellations).
+
 ##　[V0.8.1] - 2026-05-21
 ### Added
 - Spatial Smoothing Feature: Introduced a toggle switch in "1. Layout Placement" mode to enable 3x3x3 spatial smoothing (±10cm offsets, 27 points) around the microphone position. This simulates real-world acoustic measurements by averaging out extreme local dips and providing a more perceptually accurate frequency response.

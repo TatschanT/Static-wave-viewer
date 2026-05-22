@@ -43,7 +43,7 @@ DEFAULT_STATE = {
     "R": 0.80  # Default generic reflection coefficient
 }
 
-st.set_page_config(page_title="Standing Wave Viewer V0.8.1", layout="wide")
+st.set_page_config(page_title="Standing Wave Viewer V0.8.2", layout="wide")
 
 # ==========================================
 # UI Setup: Sidebar Controls
@@ -441,8 +441,8 @@ else:
         trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
     X_flat, Y_flat, Z_flat, tensor_abs = compute_tensor_3d(eff_room, eff_spk1, eff_spk2, eff_num_sources, eff_corr, sim_config, grid_size)
-    global_min = np.min(tensor_abs)
-    global_max = np.percentile(tensor_abs, 98)
+    global_min = np.percentile(tensor_abs, 2)
+    global_max = np.percentile(tensor_abs, 100)
 
     fig_vol = go.Figure()
     fig_vol.add_trace(draw_room_wireframe(eff_room.Lx, eff_room.Ly, eff_room.Lz))
@@ -451,12 +451,25 @@ else:
 
     # Initialize volumetric data
     initial_val = tensor_abs[0].flatten().astype(np.float32)
+    
+    # Trace 3: Valleys (Nodes) - 2% to 25%
     fig_vol.add_trace(go.Volume(
         x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
-        isomin=np.percentile(initial_val, 60), isomax=global_max,
-        opacity=0.3, opacityscale=[[-0.5, 0], [0, 0.2], [1, 1]],
-        surface_count=12, colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
-        caps=dict(x_show=False, y_show=False, z_show=False), name="Sound Pressure"
+        isomin=np.min(initial_val), isomax=np.percentile(initial_val, 25),
+        opacity=0.3, surface_count=6, 
+        colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
+        caps=dict(x_show=False, y_show=False, z_show=False), 
+        name="Valleys (Nodes)", showscale=False
+    ))
+
+    # Trace 4: Peaks (Anti-nodes) - 75% to 98%
+    fig_vol.add_trace(go.Volume(
+        x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
+        isomin=np.percentile(initial_val, 75), isomax=global_max,
+        opacity=0.3, surface_count=6, 
+        colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
+        caps=dict(x_show=False, y_show=False, z_show=False), 
+        name="Peaks (Anti-nodes)"
     ))
 
     # Add animation frames for sweeping through frequencies
@@ -464,14 +477,19 @@ else:
     for i, f in enumerate(FREQS_3D):
         val = tensor_abs[i].flatten().astype(np.float32)
         frames.append(go.Frame(
-            data=[go.Volume(
-                value=val,
-                isomin=np.percentile(val, 60), isomax=global_max,
-                opacity=0.3, opacityscale=[[-0.5, 0], [0, 0.2], [1, 1]],
-                surface_count=12, colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
-                caps=dict(x_show=False, y_show=False, z_show=False)
-            )],
-            traces=[3],
+            data=[
+                # Update Valleys
+                go.Volume(
+                    value=val,
+                    isomin=np.min(val), isomax=np.percentile(val, 25)
+                ),
+                # Update Peaks
+                go.Volume(
+                    value=val,
+                    isomin=np.percentile(val, 75), isomax=global_max
+                )
+            ],
+            traces=[3, 4], # Update both Volume traces (Trace 0,1,2 are room, spk, mic)
             name=str(f)
         ))
     fig_vol.frames = frames
