@@ -1,6 +1,10 @@
-# 🎵 Standing Wave Viewer
+![Standing Wave Viewer image](images/SWVtitle.jpg)
 
 Standing Wave Viewer is an 3D acoustic simulation and visualization tool built with Python and Streamlit. It calculates and visualizes room modes (standing waves) and low-frequency interference patterns to help optimize subwoofer/speaker placement and listening positions. To learn technical details behind, please refer docunets/Q_A_en.md.
+
+Please note that this is an amateur project that began as a personal endeavor, and is not intended to serve as a fully rigorous verification tool for professional use.
+I originally created it for myself, with the goal of making it as intuitive as possible to understand the acoustic characteristics of a room. However, now that it’s finished, I feel it has turned into something fairly unique, so I decided to make it available to the public.
+If it proves useful to anyone out there, I couldn’t be happier.
 
 ## ✨ Key Features
 
@@ -46,7 +50,10 @@ Then, open the provided Local URL (usually `http://localhost:8501`) in your web 
 Please access https://standing-wave-viewer.streamlit.app/
 When the app had been suspended, please rebake.
 
-Disclaimer/免責事項
+Disclaimer
 
-This tool was created by an audio enthusiast for personal use and prototyping. I'm not a professional acoustic engineer, but I wanted to visualize standing waves intuitively. Feedback, corrections, and contributions to improve the physics model are highly welcome!
-ただのオーディオ愛好家が、個人的に部屋の定在波を直感的に可視化するために作ったツールです（永遠のプロトタイプ）。私はプロの音響エンジニアではありませんので、正しさの保証はできません。物理モデルを改善するためのフィードバックや修正点がございましたら、ご教授いただけますと幸いです。
+This software is provided "AS IS", without any warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non‑infringement.
+In no event shall the author be liable for any claim, damages, or other liability arising from, out of, or in connection with the software or the use or other dealings in the software.
+This software is provided as a reference and educational tool for personal use, and is not intended to serve as the sole rigorous basis for professional‑grade verification, design decisions, or commercial services.
+This repository is also not intended as a venue for general discussions or assertions that are unrelated to the actual behavior, usability, or quality of this software.
+Such topics are considered out of scope for this project, and issues or comments along those lines may not receive a response.
