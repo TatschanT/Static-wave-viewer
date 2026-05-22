@@ -14,7 +14,7 @@ Standing Wave Viewer is an 3D acoustic simulation and visualization tool built w
   - **In-Phase (True Complex Field - Experimental)**: The ultimate physics engine. It synthesizes the exact complex field (real + imaginary parts) across the entire 3D space, perfectly reproducing the spatial warping of wave nodes when subwoofers are placed asymmetrically. Please note that this mode is experimental, and its practicality cannot be guaranteed.
 - **Customizable Wall Reflections**: Fine-tune the reflection coefficient (0.0 to 1.0) for all six boundaries (walls, floor, ceiling).
 - **Spatial Smoothing**: This feature smooths the signal within a 3x3x3 range around the microphone's coordinates to better match how sound is actually perceived. It evens out sharp dips in the In-Phase model.
-- **Optimized for Laptop Performance**: By default, it runs smoothly even on less powerful machines. You can toggle between High Resolution Mode and Large 3D View Mode for a richer desktop experience.
+- **Optimized for Laptop Performance**: By default, it runs smoothly even on less powerful machines. You can toggle to High Resolution Mode and Large 3D View Mode for a richer desktop experience.
 
 ## 🚀 Operation Modes
 
