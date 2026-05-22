@@ -1,3 +1,4 @@
+![Standing Wave Viewer image](images/SWVtitle.jpg)
 <span style="font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;">
 ![Standing Wave Viewer image](images/SWVtitle.jpg)
 
