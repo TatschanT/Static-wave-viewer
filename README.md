@@ -1,6 +1,6 @@
 # 🎵 Standing Wave Viewer
 
-Standing Wave Viewer is an advanced 3D acoustic simulation and visualization tool built with Python and Streamlit. It calculates and visualizes room modes (standing waves) and low-frequency interference patterns to help optimize subwoofer/speaker placement and listening positions.
+Standing Wave Viewer is an 3D acoustic simulation and visualization tool built with Python and Streamlit. It calculates and visualizes room modes (standing waves) and low-frequency interference patterns to help optimize subwoofer/speaker placement and listening positions. To learn technical details behind, please refer docunets/Q_A_en.md.
 
 ## ✨ Key Features
 
@@ -13,6 +13,8 @@ Standing Wave Viewer is an advanced 3D acoustic simulation and visualization too
   - **In-Phase (Global Cancel - Fast)**: A fast approximation model for phase cancellation.
   - **In-Phase (True Complex Field - Experimental)**: The ultimate physics engine. It synthesizes the exact complex field (real + imaginary parts) across the entire 3D space, perfectly reproducing the spatial warping of wave nodes when subwoofers are placed asymmetrically. Please note that this mode is experimental, and its practicality cannot be guaranteed.
 - **Customizable Wall Reflections**: Fine-tune the reflection coefficient (0.0 to 1.0) for all six boundaries (walls, floor, ceiling).
+- **Spatial Smoothing**: This feature smooths the signal within a 3x3x3 range around the microphone's coordinates to better match how sound is actually perceived. It evens out sharp dips in the In-Phase model.
+- **Optimized for Laptop Performance**: By default, it runs smoothly even on less powerful machines. You can toggle between High Resolution Mode and Large 3D View Mode for a richer desktop experience.
 
 ## 🚀 Operation Modes
 
@@ -28,7 +30,7 @@ Standing Wave Viewer is an advanced 3D acoustic simulation and visualization too
 - `numpy`
 - `plotly`
 
-### Running the App
+### Running the App (Local)
 1. Clone the repository.
 2. Install dependencies:
    ```bash
@@ -39,6 +41,10 @@ Standing Wave Viewer is an advanced 3D acoustic simulation and visualization too
    streamlit run Standing_Wave_Viewer.py
    ```
 Then, open the provided Local URL (usually `http://localhost:8501`) in your web browser.
+
+### Running at streamlit cloud
+Please access https://standing-wave-viewer.streamlit.app/
+When the app had been suspended, please rebake.
 
 Disclaimer/免責事項
 
