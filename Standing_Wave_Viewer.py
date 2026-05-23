@@ -431,6 +431,7 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
     with col_header2:
         smoothing_on = st.toggle("Spatial Smoothing (3x3x3, 10cm)", value=False, help="Averages 27 points around mic to smooth out local dips.")
 
+    # 左右並びのレイアウトに戻します
     col1, col2 = st.columns([5, 5])
     
     with col1:
@@ -444,16 +445,14 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             name='Room Bounds', hoverinfo='skip'
         ))
 
-        # 4x4分割のグリッド線（細いライトグレーの破線）
+        # 4x4分割のグリッド線
         for i in [1, 2, 3]:
-            # 垂直線（X軸の分割）
             x_val = room.Lx * i / 4.0
             fig_layout.add_trace(go.Scatter(
                 x=[x_val, x_val], y=[0, room.Ly],
                 mode='lines', line=dict(color='lightgray', width=1, dash='dash'),
                 showlegend=False, hoverinfo='skip'
             ))
-            # 水平線（Y軸の分割）
             y_val = room.Ly * i / 4.0
             fig_layout.add_trace(go.Scatter(
                 x=[0, room.Lx], y=[y_val, y_val],
@@ -461,7 +460,7 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
                 showlegend=False, hoverinfo='skip'
             ))
 
-        # スピーカーのプロット
+        # スピーカーとマイクのプロット
         spk_texts = [f"Spk 1<br>Z: {spk_zs[0]:.2f}m"] if num_sources == 1 else [f"Spk L<br>Z: {spk_zs[0]:.2f}m", f"Spk R<br>Z: {spk_zs[1]:.2f}m"]
         fig_layout.add_trace(go.Scatter(
             x=spk_xs, y=spk_ys, mode='markers+text',
@@ -470,7 +469,6 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             name="Speaker(s)"
         ))
 
-        # マイクのプロット
         fig_layout.add_trace(go.Scatter(
             x=[mic_x], y=[mic_y], mode='markers+text',
             marker=dict(size=12, color='red', symbol='diamond', line=dict(color='white', width=2)),
@@ -478,17 +476,28 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             name="Mic"
         ))
 
-        # レイアウト設定（0.1m単位のルーラーとアスペクト比1:1の固定）
+        # レイアウト設定（余白をなくし、ルーラーを壁に密着させる）
         fig_layout.update_layout(
-            xaxis=dict(range=[-0.5, room.Lx + 0.5], title="Width (X) [m]", dtick=0.1, showgrid=False, zeroline=False),
-            yaxis=dict(range=[-0.5, room.Ly + 0.5], title="Depth (Y) [m]", dtick=0.1, showgrid=False, zeroline=False),
+            xaxis=dict(
+                range=[0, room.Lx], title="Width (X) [m]",  # ★ -0.5 と +0.5 を削除
+                dtick=0.5, ticks="inside", ticklen=8,
+                minor=dict(dtick=0.1, ticks="inside", ticklen=4),
+                showgrid=False, zeroline=False
+            ),
+            yaxis=dict(
+                range=[0, room.Ly], title="Depth (Y) [m]",  # ★ 同様に削除
+                dtick=0.5, ticks="inside", ticklen=8,
+                minor=dict(dtick=0.1, ticks="outside", ticklen=4),
+                showgrid=False, zeroline=False
+            ),
             yaxis_scaleanchor="x",
             yaxis_scaleratio=1,
-            margin=dict(l=0, r=0, b=0, t=30),
+            margin=dict(l=6, r=6, b=6, t=25),
             height=chart_height,
             title="Top-Down Placement View (XY Plane)"
         )
-        st.plotly_chart(fig_layout, width='stretch')
+        # ★ config={'responsive': True} により、ウィンドウリサイズに追従して再描画させます
+        st.plotly_chart(fig_layout, width='stretch', config={'responsive': True})
 
     with col2:
         fresponse_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config, smoothing=smoothing_on)
@@ -496,10 +505,10 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
         fig_f.update_layout(
             xaxis_title="Frequency (Hz)", yaxis_title="Relative SPL (dB)",
             yaxis=dict(range=[-25, 2]),
-            margin=dict(l=0, r=0, b=0, t=30), height=chart_height, title="Frequency Response (Max Peak = 0dB)"
+            margin=dict(l=10, r=10, b=10, t=30), height=chart_height, title="Frequency Response (Max Peak = 0dB)"
         )
-        st.plotly_chart(fig_f, width='stretch')
-
+        # ★ こちらもリサイズに追従させます
+        st.plotly_chart(fig_f, width='stretch', config={'responsive': True})
 else:
     if mode == "📐 3. Room Bare Specs (Rigid/Corner)":
         eff_num_sources = 1
