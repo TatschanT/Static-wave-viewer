@@ -427,27 +427,72 @@ else:
 if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
     col_header1, col_header2 = st.columns([6, 4])
     with col_header1:
-        st.info("💡 **Layout Placement Mode**: Adjust coordinates.")
+        st.info("Layout Placement Mode: Adjust coordinates with top-down 2D view.")
     with col_header2:
-        smoothing_on = st.toggle("Spatial Smoothing (3x3x3, ±10cm)", value=False, help="Averages 27 points around mic to smooth out local dips.")
+        smoothing_on = st.toggle("Spatial Smoothing (3x3x3, 10cm)", value=False, help="Averages 27 points around mic to smooth out local dips.")
 
     col1, col2 = st.columns([5, 5])
-
-    trace_spk = go.Scatter3d(x=spk_xs, y=spk_ys, z=spk_zs, mode='markers', marker=dict(size=8, color='blue', symbol='square', line=dict(color='white', width=2)), name="Speaker(s)")
-    trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
-
+    
     with col1:
-        wireframes = draw_room_wireframe(room.Lx, room.Ly, room.Lz)
-        fig_layout = go.Figure(data=[*wireframes, trace_spk, trace_mic])
+        fig_layout = go.Figure()
+
+        # 部屋の境界線
+        fig_layout.add_trace(go.Scatter(
+            x=[0, room.Lx, room.Lx, 0, 0],
+            y=[0, 0, room.Ly, room.Ly, 0],
+            mode='lines', line=dict(color='gray', width=3),
+            name='Room Bounds', hoverinfo='skip'
+        ))
+
+        # 4x4分割のグリッド線（細いライトグレーの破線）
+        for i in [1, 2, 3]:
+            # 垂直線（X軸の分割）
+            x_val = room.Lx * i / 4.0
+            fig_layout.add_trace(go.Scatter(
+                x=[x_val, x_val], y=[0, room.Ly],
+                mode='lines', line=dict(color='lightgray', width=1, dash='dash'),
+                showlegend=False, hoverinfo='skip'
+            ))
+            # 水平線（Y軸の分割）
+            y_val = room.Ly * i / 4.0
+            fig_layout.add_trace(go.Scatter(
+                x=[0, room.Lx], y=[y_val, y_val],
+                mode='lines', line=dict(color='lightgray', width=1, dash='dash'),
+                showlegend=False, hoverinfo='skip'
+            ))
+
+        # スピーカーのプロット
+        spk_texts = [f"Spk 1<br>Z: {spk_zs[0]:.2f}m"] if num_sources == 1 else [f"Spk L<br>Z: {spk_zs[0]:.2f}m", f"Spk R<br>Z: {spk_zs[1]:.2f}m"]
+        fig_layout.add_trace(go.Scatter(
+            x=spk_xs, y=spk_ys, mode='markers+text',
+            marker=dict(size=12, color='blue', symbol='square', line=dict(color='white', width=2)),
+            text=spk_texts, textposition="top center",
+            name="Speaker(s)"
+        ))
+
+        # マイクのプロット
+        fig_layout.add_trace(go.Scatter(
+            x=[mic_x], y=[mic_y], mode='markers+text',
+            marker=dict(size=12, color='red', symbol='diamond', line=dict(color='white', width=2)),
+            text=[f"Mic<br>Z: {mic_z:.2f}m"], textposition="top center",
+            name="Mic"
+        ))
+
+        # レイアウト設定（0.1m単位のルーラーとアスペクト比1:1の固定）
         fig_layout.update_layout(
-            scene=dict(xaxis=dict(range=[-0.5, room.Lx+0.5]), yaxis=dict(range=[-0.5, room.Ly+0.5]), zaxis=dict(range=[-0.5, room.Lz+0.5]), aspectmode='data'),
-            margin=dict(l=0, r=0, b=0, t=30), height=chart_height, title="3D Equipment Layout"
+            xaxis=dict(range=[-0.5, room.Lx + 0.5], title="Width (X) [m]", dtick=0.1, showgrid=False, zeroline=False),
+            yaxis=dict(range=[-0.5, room.Ly + 0.5], title="Depth (Y) [m]", dtick=0.1, showgrid=False, zeroline=False),
+            yaxis_scaleanchor="x",
+            yaxis_scaleratio=1,
+            margin=dict(l=0, r=0, b=0, t=30),
+            height=chart_height,
+            title="Top-Down Placement View (XY Plane)"
         )
         st.plotly_chart(fig_layout, width='stretch')
 
     with col2:
-        f_response_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config, smoothing=smoothing_on)
-        fig_f = go.Figure(data=[go.Scatter(x=FREQS_1D, y=f_response_db, mode='lines+markers', line=dict(color='red', width=2))])
+        fresponse_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config, smoothing=smoothing_on)
+        fig_f = go.Figure(data=go.Scatter(x=sim_config.freqs_1d, y=fresponse_db, mode='lines+markers', line=dict(color='red', width=2)))
         fig_f.update_layout(
             xaxis_title="Frequency (Hz)", yaxis_title="Relative SPL (dB)",
             yaxis=dict(range=[-25, 2]),
