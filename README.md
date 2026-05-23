@@ -8,7 +8,7 @@ If it proves useful to anyone out there, I couldn’t be happier.
 
 ## ✨ Key Features
 
-- **Interactive 3D Room Setup**: Easily adjust room dimensions, speaker coordinates, and microphone positions using a sidebar UI with real-time 3D wireframe rendering.
+- **Interactive 3D Room Setup**: Easily adjust room dimensions, speaker coordinates, and microphone positions using a sidebar UI.
 - **Accurate Frequency Response**: Simulates the frequency response (20Hz - 200Hz) at the microphone position, accounting for room dimensions and wall reflection coefficients.
 - **Volumetric 3D Visualization**: Animates the sound pressure distribution (nodes and antinodes) across the entire 3D room space for any given frequency.
 - **Advanced Stereo Interference Models**: 
