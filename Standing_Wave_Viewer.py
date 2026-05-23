@@ -164,10 +164,10 @@ FREQS_1D = np.arange(20, 201, 1)
 
 if high_res:
     FREQS_3D = np.arange(20, 201, 2)
-    grid_size = 32
+    grid_size = 37
 else:
     FREQS_3D = np.arange(20, 205, 5)
-    grid_size = 24
+    grid_size = 25
 
 room = RoomConfig(Lx=Lx, Ly=Ly, Lz=Lz, Rx=Rx, Ry=Ry, Rz=Rz)
 spk1_pos = Position(x=spk_x, y=spk_y, z=spk_z)
@@ -370,16 +370,50 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
 
     return X.flatten(), Y.flatten(), Z.flatten(), tensor
 
-def draw_room_wireframe(Lx: float, Ly: float, Lz: float) -> go.Scatter3d:
-    """Generates Plotly trace for the room boundaries (wireframe cube)."""
+def draw_room_wireframe(Lx: float, Ly: float, Lz: float) -> list[go.Scatter3d]:
+    """Generates Plotly traces for the room boundaries and 1/4 subdivision grid."""
+    # 1. 外枠（太いグレーの線）
     x_lines = [0, Lx, Lx, 0, 0, 0, Lx, Lx, 0, 0, None, Lx, Lx, None, Lx, Lx, None, 0, 0]
     y_lines = [0, 0, Ly, Ly, 0, 0, 0, Ly, Ly, 0, None, 0, 0, None, Ly, Ly, None, Ly, Ly]
     z_lines = [0, 0, 0, 0, 0, Lz, Lz, Lz, Lz, Lz, None, 0, Lz, None, 0, Lz, None, 0, Lz]
-    return go.Scatter3d(
-        x=x_lines, y=y_lines, z=z_lines, 
-        mode='lines', line=dict(color='gray', width=3), 
-        name="Room Bounds", hoverinfo='skip'
+    
+    bounds_trace = go.Scatter3d(
+        x=x_lines, y=y_lines, z=z_lines,
+        mode='lines', line=dict(color='gray', width=3),
+        name='Room Bounds', hoverinfo='skip'
     )
+
+    # 2. 四分割グリッド（細いライトグレーの線）
+    gx, gy, gz = [], [], []
+    
+    # X軸方向の分割線（床、天井、手前壁、奥壁）
+    for i in [1, 2, 3]:
+        x = Lx * i / 4.0
+        gx.extend([x, x, None, x, x, None, x, x, None, x, x, None])
+        gy.extend([0, Ly, None, 0, Ly, None, 0, 0, None, Ly, Ly, None])
+        gz.extend([0, 0, None, Lz, Lz, None, 0, Lz, None, 0, Lz, None])
+        
+    # Y軸方向の分割線（床、天井、左壁、右壁）
+    for i in [1, 2, 3]:
+        y = Ly * i / 4.0
+        gx.extend([0, Lx, None, 0, Lx, None, 0, 0, None, Lx, Lx, None])
+        gy.extend([y, y, None, y, y, None, y, y, None, y, y, None])
+        gz.extend([0, 0, None, Lz, Lz, None, 0, Lz, None, 0, Lz, None])
+
+    # Z軸方向の分割線（手前壁、奥壁、左壁、右壁）
+    for i in [1, 2, 3]:
+        z = Lz * i / 4.0
+        gx.extend([0, Lx, None, 0, Lx, None, 0, 0, None, Lx, Lx, None])
+        gy.extend([0, 0, None, Ly, Ly, None, 0, Ly, None, 0, Ly, None])
+        gz.extend([z, z, None, z, z, None, z, z, None, z, z, None])
+
+    grid_trace = go.Scatter3d(
+        x=gx, y=gy, z=gz,
+        mode='lines', line=dict(color='lightgray', width=1),
+        name='1/4 Grid', hoverinfo='skip'
+    )
+
+    return [bounds_trace, grid_trace]
 
 # ==========================================
 # Rendering
@@ -403,7 +437,8 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
     trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
     with col1:
-        fig_layout = go.Figure(data=[draw_room_wireframe(room.Lx, room.Ly, room.Lz), trace_spk, trace_mic])
+        wireframes = draw_room_wireframe(room.Lx, room.Ly, room.Lz)
+        fig_layout = go.Figure(data=[*wireframes, trace_spk, trace_mic])
         fig_layout.update_layout(
             scene=dict(xaxis=dict(range=[-0.5, room.Lx+0.5]), yaxis=dict(range=[-0.5, room.Ly+0.5]), zaxis=dict(range=[-0.5, room.Lz+0.5]), aspectmode='data'),
             margin=dict(l=0, r=0, b=0, t=30), height=chart_height, title="3D Equipment Layout"
@@ -441,57 +476,70 @@ else:
         trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
     X_flat, Y_flat, Z_flat, tensor_abs = compute_tensor_3d(eff_room, eff_spk1, eff_spk2, eff_num_sources, eff_corr, sim_config, grid_size)
-    global_min = np.percentile(tensor_abs, 2)
-    global_max = np.percentile(tensor_abs, 100)
-
+    
     fig_vol = go.Figure()
-    fig_vol.add_trace(draw_room_wireframe(eff_room.Lx, eff_room.Ly, eff_room.Lz))
+    
+    for trace in draw_room_wireframe(eff_room.Lx, eff_room.Ly, eff_room.Lz):
+        fig_vol.add_trace(trace)
+        
     fig_vol.add_trace(trace_spk)
     fig_vol.add_trace(trace_mic)
-
-    # Initialize volumetric data
-    initial_val = tensor_abs[0].flatten().astype(np.float32)
     
-    # Trace 3: Valleys (Nodes) - 2% to 25%
+    # --- 標準偏差（σ）を用いた統計的スケール決定 ---
+    mean_val = np.mean(tensor_abs)
+    std_val = np.std(tensor_abs)
+
+    # ±2σの範囲（全体の約95.4%が収まる範囲）を計算
+    # ※音圧の絶対値（振幅）はマイナスにならないため、下限は0でクリップします
+    robust_min = max(0.0, mean_val - 2 * std_val)
+    robust_max = mean_val + 2 * std_val
+
+    # この ±2σ の「実質的なレンジ」の中で、下から30%を谷、上から30%を山とする
+    range_span = robust_max - robust_min
+    fixed_valley_max = robust_min + range_span * 0.3
+    fixed_peak_min = robust_min + range_span * 0.7
+
+    # ※ Volume描画の限界値には絶対的な最大・最小を使用（先端がスパッと切れるのを防ぐため）
+    abs_min = np.min(tensor_abs)
+    abs_max = np.max(tensor_abs)
+
+    # --- 初期表示トレース ---
+    initial_val = tensor_abs[0].flatten().astype(np.float32)
+
+    # Trace 4: Valleys
     fig_vol.add_trace(go.Volume(
-        x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
-        isomin=np.min(initial_val), isomax=np.percentile(initial_val, 25),
-        opacity=0.3, surface_count=6, 
-        colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
-        caps=dict(x_show=False, y_show=False, z_show=False), 
-        name="Valleys (Nodes)", showscale=False
+            x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
+            isomin=abs_min,
+            isomax=fixed_valley_max,
+            opacity=0.25, surface_count=8, colorscale='RdYlBu_r',
+            cmin=robust_min, cmax=robust_max,  # ★色塗りの基準に ±2σ の範囲を使用
+            caps=dict(x_show=False, y_show=False, z_show=False),
+            name='Valleys', showscale=False
     ))
 
-    # Trace 4: Peaks (Anti-nodes) - 75% to 98%
+    # Trace 5: Peaks
     fig_vol.add_trace(go.Volume(
-        x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
-        isomin=np.percentile(initial_val, 75), isomax=global_max,
-        opacity=0.3, surface_count=6, 
-        colorscale='RdYlBu_r', cmin=global_min, cmax=global_max,
-        caps=dict(x_show=False, y_show=False, z_show=False), 
-        name="Peaks (Anti-nodes)"
+            x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
+            isomin=fixed_peak_min,
+            isomax=abs_max,
+            opacity=0.3, surface_count=6, colorscale='RdYlBu_r',
+            cmin=robust_min, cmax=robust_max,  # ★同上
+            caps=dict(x_show=False, y_show=False, z_show=False),
+            name='Peaks'
     ))
 
-    # Add animation frames for sweeping through frequencies
+    # --- アニメーションフレーム生成 ---
     frames = []
-    for i, f in enumerate(FREQS_3D):
-        val = tensor_abs[i].flatten().astype(np.float32)
-        frames.append(go.Frame(
-            data=[
-                # Update Valleys
-                go.Volume(
-                    value=val,
-                    isomin=np.min(val), isomax=np.percentile(val, 25)
-                ),
-                # Update Peaks
-                go.Volume(
-                    value=val,
-                    isomin=np.percentile(val, 75), isomax=global_max
-                )
-            ],
-            traces=[3, 4], # Update both Volume traces (Trace 0,1,2 are room, spk, mic)
-            name=str(f)
-        ))
+    for i, f in enumerate(sim_config.freqs_3d):
+            val = tensor_abs[i].flatten().astype(np.float32)
+            frames.append(go.Frame(
+                data=[
+                    go.Volume(value=val, isomin=abs_min, isomax=fixed_valley_max),
+                    go.Volume(value=val, isomin=fixed_peak_min, isomax=abs_max)
+                ],
+                traces=[4, 5],
+                name=str(f)
+    ))    
     fig_vol.frames = frames
 
     fig_vol.update_layout(
@@ -519,8 +567,7 @@ else:
             active=0, yanchor="top", xanchor="left", currentvalue=dict(font=dict(size=16), prefix="Frequency: ", suffix=" Hz"),
             transition=dict(duration=0), pad=dict(b=10, t=50), len=0.9, x=0.15, y=0,
             steps=[dict(args=[[str(f)], dict(frame=dict(duration=300, redraw=True), mode="immediate", transition=dict(duration=0))],
-            label=str(f), method="animate") for f in FREQS_3D]
+            label=str(f), method="animate") for f in sim_config.freqs_3d]
         )]
     )
-
     st.plotly_chart(fig_vol, width='stretch')
