@@ -615,4 +615,51 @@ else:
             label=str(f), method="animate") for f in sim_config.freqs_3d]
         )]
     )
-    st.plotly_chart(fig_vol, width='stretch')
+    st.plotly_chart(fig_vol, width='stretch') 
+
+if "3." in mode:
+    import pandas as pd
+    
+    st.markdown("### Fundamental Room Modes (1st to 3rd Order)")
+    
+    # 7つの基本モード (名前, nx, ny, nz)
+    base_modes = [
+        ("Axial X (1,0,0)", 1, 0, 0),
+        ("Axial Y (0,1,0)", 0, 1, 0),
+        ("Axial Z (0,0,1)", 0, 0, 1),
+        ("Tangential XY (1,1,0)", 1, 1, 0),
+        ("Tangential XZ (1,0,1)", 1, 0, 1),
+        ("Tangential YZ (0,1,1)", 0, 1, 1),
+        ("Oblique (1,1,1)", 1, 1, 1)
+    ]
+    
+    table_data = []
+    c = sim_config.speed_of_sound
+    
+    for name, nx, ny, nz in base_modes:
+        # 1次周波数の計算
+        f1 = (c / 2.0) * np.sqrt((nx/room.Lx)**2 + (ny/room.Ly)**2 + (nz/room.Lz)**2)
+        # 等価長（波長の半分）
+        length = c / (2.0 * f1)
+        
+        table_data.append({
+            "Mode": name,
+            "Length (m)": round(length, 2),
+            "1st (Hz)": round(f1, 1),
+            "2nd (Hz)": round(f1 * 2, 1),
+            "3rd (Hz)": round(f1 * 3, 1)
+        })
+        
+    df_modes = pd.DataFrame(table_data)
+    
+    # テーブルの表示（hide_indexで行番号を消し、スッキリさせます）
+    st.dataframe(df_modes, width='stretch', hide_index=True)
+    
+    # CSVエクスポート用ボタン
+    csv_data = df_modes.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(
+        label="📥 Download Table as CSV",
+        data=csv_data,
+        file_name="room_modes_specs.csv",
+        mime="text/csv"
+    )
