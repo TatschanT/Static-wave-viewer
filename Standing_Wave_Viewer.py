@@ -9,14 +9,12 @@ from dataclasses import dataclass
 
 @dataclass
 class Position:
-    """Represents a 3D spatial coordinate in meters."""
     x: float
     y: float
     z: float
 
 @dataclass
 class RoomConfig:
-    """Stores room dimensions and wall reflection coefficients."""
     Lx: float
     Ly: float
     Lz: float
@@ -26,7 +24,6 @@ class RoomConfig:
 
 @dataclass
 class SimConfig:
-    """Stores global simulation parameters and frequency arrays."""
     speed_of_sound: float
     freqs_1d: np.ndarray
     freqs_3d: np.ndarray
@@ -40,17 +37,17 @@ DEFAULT_STATE = {
     "spk_x": 0.5, "spk_y": 0.5, "spk_z": 0.5,
     "spk2_x": 3.0, "spk2_y": 0.5, "spk2_z": 0.5,
     "mic_x": 1.75, "mic_y": 1.3, "mic_z": 1.2,
-    "R": 0.80  # Default generic reflection coefficient
+    "R": 0.80
 }
 
-st.set_page_config(page_title="Standing Wave Viewer V0.8.2", layout="wide")
+st.set_page_config(page_title="Standing Wave Viewer V0.9.0", layout="wide")
 
 # ==========================================
 # UI Setup: Sidebar Controls
 # ==========================================
 
 st.sidebar.image("images/SWVlogo.jpg", width='stretch')
-st.sidebar.markdown("Control Panel")
+st.sidebar.markdown("### Control Panel")
 
 source_mode = st.sidebar.radio("Sound Source Setup", [
     "🔊 1 Source (Mono)",
@@ -73,7 +70,7 @@ mode = st.sidebar.radio("Operation Mode", [
     "📐 3. Room Bare Specs (Rigid/Corner)"
 ])
 
-# Display resolution and view size toggles
+# UI scaling and resolution toggles
 st.sidebar.markdown("---")
 high_res = st.sidebar.toggle("High Resolution Mode (Slower)", value=False, help="Enable 32x32x32 grid and 2Hz steps. Default is 24x24x24 grid and 5Hz steps.")
 large_view = st.sidebar.toggle("Large 3D View", value=False, help="Increase the 3D graph height for high-resolution displays.")
@@ -86,7 +83,7 @@ Lz = st.sidebar.slider("Height (Lz)", 1.0, 5.0, DEFAULT_STATE["Lz"], 0.02)
 
 st.sidebar.header("Equipment Positions (m)")
 
-# Initialize session state for symmetric positioning
+# Init session states for mirrored speaker layout
 if "spk2_x_state" not in st.session_state:
     st.session_state["spk2_x_state"] = DEFAULT_STATE["spk2_x"]
 if "spk2_y_state" not in st.session_state:
@@ -102,7 +99,7 @@ if num_sources == 2:
 
     st.sidebar.markdown("**Spk 1 (L)**")
 
-    # Constrain Spk 1 X coordinate if symmetry is linked
+    # Enforce symmetry constraint on Spk 1 X-axis
     max_x_spk1 = Lx / 2.0 if link_lr else Lx
     current_spk_x = st.session_state.get("s1x", DEFAULT_STATE["spk_x"])
     if current_spk_x > max_x_spk1:
@@ -113,7 +110,7 @@ if num_sources == 2:
     spk_z = st.sidebar.slider("Z", 0.0, Lz, DEFAULT_STATE["spk_z"], 0.01, key="s1z")
 
     if link_lr:
-        # Calculate mirrored coordinates internally without displaying UI sliders for Spk 2
+        # Compute mirrored Spk 2 coordinates implicitly
         st.sidebar.info(f"👉 **Spk 2 (R)** is locked symmetrically at:\nX: {Lx - spk_x:.2f}m, Y: {spk_y:.2f}m, Z: {spk_z:.2f}m")
         spk2_x = float(Lx - spk_x)
         spk2_y = float(spk_y)
@@ -127,7 +124,7 @@ if num_sources == 2:
         spk2_x = st.sidebar.slider("X", 0.0, Lx, float(safe_spk2_x), 0.01, key="s2x")
         spk2_y = st.sidebar.slider("Y", 0.0, Ly, st.session_state["spk2_y_state"], 0.01, key="s2y")
         spk2_z = st.sidebar.slider("Z", 0.0, Lz, st.session_state["spk2_z_state"], 0.01, key="s2z")
-        
+
         st.session_state["spk2_x_state"] = spk2_x
         st.session_state["spk2_y_state"] = spk2_y
         st.session_state["spk2_z_state"] = spk2_z
@@ -151,9 +148,9 @@ with st.sidebar.expander("🧱 Wall Reflection Coefficients"):
     Rz1 = st.slider("Floor (Z=0)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
     Rz2 = st.slider("Ceiling (Z=Lz)", 0.0, 1.0, DEFAULT_STATE["R"], 0.05)
 
-Rx = (Rx1 + Rx2) / 2.0
-Ry = (Ry1 + Ry2) / 2.0
-Rz = (Rz1 + Rz2) / 2.0
+    Rx = (Rx1 + Rx2) / 2.0
+    Ry = (Ry1 + Ry2) / 2.0
+    Rz = (Rz1 + Rz2) / 2.0
 
 # ==========================================
 # Physics Constants & Object Initialization
@@ -180,7 +177,6 @@ sim_config = SimConfig(speed_of_sound=SPEED_OF_SOUND, freqs_1d=FREQS_1D, freqs_3
 # ==========================================
 
 def get_max_modes(room: RoomConfig, config: SimConfig) -> tuple:
-    """Calculates maximum modal indices (nx, ny, nz) based on room size and upper frequency limit."""
     return (
         int(2.0 * room.Lx * 250 / config.speed_of_sound) + 2,
         int(2.0 * room.Ly * 250 / config.speed_of_sound) + 2,
@@ -188,18 +184,15 @@ def get_max_modes(room: RoomConfig, config: SimConfig) -> tuple:
     )
 
 def calc_shape(n: int, pos: float, L: float, R: float) -> float:
-    """Calculates the 1D spatial mode shape function (amplitude scalar)."""
     if n == 0: return pos * 0.0 + 1.0
     return np.sqrt(1 + R**2 + 2 * R * np.cos(2 * n * np.pi * pos / L)) / (1 + R)
 
 def get_psi(n: int, pos: float, L: float, R: float) -> complex:
-    """Calculates the 1D complex mode shape function, accounting for phase and wall absorption."""
     if n == 0: return 1.0 + 0j
     theta = n * np.pi * pos / L
     return np.cos(theta) - 1j * ((1 - R) / (1 + R)) * np.sin(theta)
 
 def calc_gamma(nx: int, ny: int, nz: int, room: RoomConfig) -> float:
-    """Calculates the modal damping factor (gamma) based on wall reflection coefficients."""
     n_sum = nx + ny + nz
     if n_sum == 0: return 5.0
     R_eff = (nx * room.Rx + ny * room.Ry + nz * room.Rz) / n_sum
@@ -207,10 +200,6 @@ def calc_gamma(nx: int, ny: int, nz: int, room: RoomConfig) -> float:
 
 @st.cache_data(show_spinner=False)
 def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic: Position, num_src: int, corr_mode: str, config: SimConfig, smoothing: bool = False) -> np.ndarray:
-    """
-    Computes the 1D frequency response (SPL vs Frequency) at the microphone position(s).
-    Supports spatial smoothing by averaging over a 3x3x3 grid around the mic.
-    """
     Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
     Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
     sx, sy, sz = spk1.x, spk1.y, spk1.z
@@ -295,10 +284,6 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
 
 @st.cache_data(show_spinner="Calculating spatial tensor...")
 def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src: int, corr_mode: str, config: SimConfig, grid_size: int = 32) -> tuple:
-    """
-    Computes the 3D spatial pressure field tensor across all requested frequencies.
-    Returns flattened meshgrid coordinates and the volumetric pressure magnitude tensor.
-    """
     Lx, Ly, Lz = room.Lx, room.Ly, room.Lz
     Rx, Ry, Rz = room.Rx, room.Ry, room.Rz
     sx, sy, sz = spk1.x, spk1.y, spk1.z
@@ -371,36 +356,35 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
     return X.flatten(), Y.flatten(), Z.flatten(), tensor
 
 def draw_room_wireframe(Lx: float, Ly: float, Lz: float) -> list[go.Scatter3d]:
-    """Generates Plotly traces for the room boundaries and 1/4 subdivision grid."""
-    # 1. 外枠（太いグレーの線）
+    # 1. Room Boundaries
     x_lines = [0, Lx, Lx, 0, 0, 0, Lx, Lx, 0, 0, None, Lx, Lx, None, Lx, Lx, None, 0, 0]
     y_lines = [0, 0, Ly, Ly, 0, 0, 0, Ly, Ly, 0, None, 0, 0, None, Ly, Ly, None, Ly, Ly]
     z_lines = [0, 0, 0, 0, 0, Lz, Lz, Lz, Lz, Lz, None, 0, Lz, None, 0, Lz, None, 0, Lz]
-    
+
     bounds_trace = go.Scatter3d(
         x=x_lines, y=y_lines, z=z_lines,
         mode='lines', line=dict(color='gray', width=3),
         name='Room Bounds', hoverinfo='skip'
     )
 
-    # 2. 四分割グリッド（細いライトグレーの線）
+    # 2. 1/4 Subdivision Grid
     gx, gy, gz = [], [], []
-    
-    # X軸方向の分割線（床、天井、手前壁、奥壁）
+
+    # X-axis divisions
     for i in [1, 2, 3]:
         x = Lx * i / 4.0
         gx.extend([x, x, None, x, x, None, x, x, None, x, x, None])
         gy.extend([0, Ly, None, 0, Ly, None, 0, 0, None, Ly, Ly, None])
         gz.extend([0, 0, None, Lz, Lz, None, 0, Lz, None, 0, Lz, None])
-        
-    # Y軸方向の分割線（床、天井、左壁、右壁）
+
+    # Y-axis divisions
     for i in [1, 2, 3]:
         y = Ly * i / 4.0
         gx.extend([0, Lx, None, 0, Lx, None, 0, 0, None, Lx, Lx, None])
         gy.extend([y, y, None, y, y, None, y, y, None, y, y, None])
         gz.extend([0, 0, None, Lz, Lz, None, 0, Lz, None, 0, Lz, None])
 
-    # Z軸方向の分割線（手前壁、奥壁、左壁、右壁）
+    # Z-axis divisions
     for i in [1, 2, 3]:
         z = Lz * i / 4.0
         gx.extend([0, Lx, None, 0, Lx, None, 0, 0, None, Lx, Lx, None])
@@ -431,13 +415,12 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
     with col_header2:
         smoothing_on = st.toggle("Spatial Smoothing (3x3x3, 10cm)", value=False, help="Averages 27 points around mic to smooth out local dips.")
 
-    # 左右並びのレイアウトに戻します
     col1, col2 = st.columns([5, 5])
-    
+
     with col1:
         fig_layout = go.Figure()
 
-        # 部屋の境界線
+        # Room boundaries
         fig_layout.add_trace(go.Scatter(
             x=[0, room.Lx, room.Lx, 0, 0],
             y=[0, 0, room.Ly, room.Ly, 0],
@@ -445,14 +428,16 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             name='Room Bounds', hoverinfo='skip'
         ))
 
-        # 4x4分割のグリッド線
+        # 4x4 internal grid lines
         for i in [1, 2, 3]:
+            # X-axis divisions
             x_val = room.Lx * i / 4.0
             fig_layout.add_trace(go.Scatter(
                 x=[x_val, x_val], y=[0, room.Ly],
                 mode='lines', line=dict(color='lightgray', width=1, dash='dash'),
                 showlegend=False, hoverinfo='skip'
             ))
+            # Y-axis divisions
             y_val = room.Ly * i / 4.0
             fig_layout.add_trace(go.Scatter(
                 x=[0, room.Lx], y=[y_val, y_val],
@@ -460,7 +445,7 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
                 showlegend=False, hoverinfo='skip'
             ))
 
-        # スピーカーとマイクのプロット
+        # Plot Equipment (Speakers)
         spk_texts = [f"Spk 1<br>Z: {spk_zs[0]:.2f}m"] if num_sources == 1 else [f"Spk L<br>Z: {spk_zs[0]:.2f}m", f"Spk R<br>Z: {spk_zs[1]:.2f}m"]
         fig_layout.add_trace(go.Scatter(
             x=spk_xs, y=spk_ys, mode='markers+text',
@@ -469,6 +454,7 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             name="Speaker(s)"
         ))
 
+        # Plot Microphone
         fig_layout.add_trace(go.Scatter(
             x=[mic_x], y=[mic_y], mode='markers+text',
             marker=dict(size=12, color='red', symbol='diamond', line=dict(color='white', width=2)),
@@ -476,16 +462,16 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             name="Mic"
         ))
 
-        # レイアウト設定（余白をなくし、ルーラーを壁に密着させる）
+        # Configure layout: remove margins to attach rulers directly to walls
         fig_layout.update_layout(
             xaxis=dict(
-                range=[0, room.Lx], title="Width (X) [m]",  # ★ -0.5 と +0.5 を削除
+                range=[0, room.Lx], title="Width (X) [m]",
                 dtick=0.5, ticks="inside", ticklen=8,
                 minor=dict(dtick=0.1, ticks="inside", ticklen=4),
                 showgrid=False, zeroline=False
             ),
             yaxis=dict(
-                range=[0, room.Ly], title="Depth (Y) [m]",  # ★ 同様に削除
+                range=[0, room.Ly], title="Depth (Y) [m]",
                 dtick=0.5, ticks="inside", ticklen=8,
                 minor=dict(dtick=0.1, ticks="outside", ticklen=4),
                 showgrid=False, zeroline=False
@@ -496,19 +482,20 @@ if mode == "🎛️ 1. Layout Placement (Ultra-fast)":
             height=chart_height,
             title="Top-Down Placement View (XY Plane)"
         )
-        # ★ config={'responsive': True} により、ウィンドウリサイズに追従して再描画させます
+        # 'responsive': True forces Plotly to recalculate size on window resize
         st.plotly_chart(fig_layout, width='stretch', config={'responsive': True})
 
     with col2:
-        fresponse_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config, smoothing=smoothing_on)
-        fig_f = go.Figure(data=go.Scatter(x=sim_config.freqs_1d, y=fresponse_db, mode='lines+markers', line=dict(color='red', width=2)))
+        f_response_db = compute_f_response_1d(room, spk1_pos, spk2_pos, mic_pos, num_sources, corr_mode, sim_config, smoothing=smoothing_on)
+        fig_f = go.Figure(data=go.Scatter(x=sim_config.freqs_1d, y=f_response_db, mode='lines+markers', line=dict(color='red', width=2)))
         fig_f.update_layout(
             xaxis_title="Frequency (Hz)", yaxis_title="Relative SPL (dB)",
             yaxis=dict(range=[-25, 2]),
             margin=dict(l=10, r=10, b=10, t=30), height=chart_height, title="Frequency Response (Max Peak = 0dB)"
         )
-        # ★ こちらもリサイズに追従させます
+        # Make chart responsive to resize
         st.plotly_chart(fig_f, width='stretch', config={'responsive': True})
+
 else:
     if mode == "📐 3. Room Bare Specs (Rigid/Corner)":
         eff_num_sources = 1
@@ -530,70 +517,69 @@ else:
         trace_mic = go.Scatter3d(x=[mic_x], y=[mic_y], z=[mic_z], mode='markers', marker=dict(size=8, color='red', symbol='diamond', line=dict(color='white', width=2)), name="Mic")
 
     X_flat, Y_flat, Z_flat, tensor_abs = compute_tensor_3d(eff_room, eff_spk1, eff_spk2, eff_num_sources, eff_corr, sim_config, grid_size)
-    
+
     fig_vol = go.Figure()
-    
+
     for trace in draw_room_wireframe(eff_room.Lx, eff_room.Ly, eff_room.Lz):
         fig_vol.add_trace(trace)
-        
+
     fig_vol.add_trace(trace_spk)
     fig_vol.add_trace(trace_mic)
-    
-    # --- 標準偏差（σ）を用いた統計的スケール決定 ---
+
+    # --- Statistical Scaling via Standard Deviation ---
     mean_val = np.mean(tensor_abs)
     std_val = np.std(tensor_abs)
 
-    # ±2σの範囲（全体の約95.4%が収まる範囲）を計算
-    # ※音圧の絶対値（振幅）はマイナスにならないため、下限は0でクリップします
+    # Calculate ±2 sigma range (covers ~95.4% of data). Clip lower bound to 0.
     robust_min = max(0.0, mean_val - 2 * std_val)
     robust_max = mean_val + 2 * std_val
 
-    # この ±2σ の「実質的なレンジ」の中で、下から30%を谷、上から30%を山とする
+    # Define visual thresholds within the 2-sigma robust range (30% for valleys, 70% for peaks)
     range_span = robust_max - robust_min
     fixed_valley_max = robust_min + range_span * 0.3
     fixed_peak_min = robust_min + range_span * 0.7
 
-    # ※ Volume描画の限界値には絶対的な最大・最小を使用（先端がスパッと切れるのを防ぐため）
+    # Use absolute min/max for physical volume bounds to prevent visual clipping
     abs_min = np.min(tensor_abs)
     abs_max = np.max(tensor_abs)
 
-    # --- 初期表示トレース ---
+    # --- Init Volumetric Traces ---
     initial_val = tensor_abs[0].flatten().astype(np.float32)
 
     # Trace 4: Valleys
     fig_vol.add_trace(go.Volume(
-            x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
-            isomin=abs_min,
-            isomax=fixed_valley_max,
-            opacity=0.25, surface_count=8, colorscale='RdYlBu_r',
-            cmin=robust_min, cmax=robust_max,  # ★色塗りの基準に ±2σ の範囲を使用
-            caps=dict(x_show=False, y_show=False, z_show=False),
-            name='Valleys', showscale=False
+        x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
+        isomin=abs_min,
+        isomax=fixed_valley_max,
+        opacity=0.25, surface_count=8, colorscale='RdYlBu_r',
+        cmin=robust_min, cmax=robust_max, # Map colorscale to robust ±2 sigma range
+        caps=dict(x_show=False, y_show=False, z_show=False),
+        name='Valleys', showscale=False
     ))
 
     # Trace 5: Peaks
     fig_vol.add_trace(go.Volume(
-            x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
-            isomin=fixed_peak_min,
-            isomax=abs_max,
-            opacity=0.3, surface_count=6, colorscale='RdYlBu_r',
-            cmin=robust_min, cmax=robust_max,  # ★同上
-            caps=dict(x_show=False, y_show=False, z_show=False),
-            name='Peaks'
+        x=X_flat, y=Y_flat, z=Z_flat, value=initial_val,
+        isomin=fixed_peak_min,
+        isomax=abs_max,
+        opacity=0.3, surface_count=6, colorscale='RdYlBu_r',
+        cmin=robust_min, cmax=robust_max, # Same as above
+        caps=dict(x_show=False, y_show=False, z_show=False),
+        name='Peaks'
     ))
 
-    # --- アニメーションフレーム生成 ---
+    # --- Generate Animation Frames ---
     frames = []
     for i, f in enumerate(sim_config.freqs_3d):
-            val = tensor_abs[i].flatten().astype(np.float32)
-            frames.append(go.Frame(
-                data=[
-                    go.Volume(value=val, isomin=abs_min, isomax=fixed_valley_max),
-                    go.Volume(value=val, isomin=fixed_peak_min, isomax=abs_max)
-                ],
-                traces=[4, 5],
-                name=str(f)
-    ))    
+        val = tensor_abs[i].flatten().astype(np.float32)
+        frames.append(go.Frame(
+            data=[
+                go.Volume(value=val, isomin=abs_min, isomax=fixed_valley_max),
+                go.Volume(value=val, isomin=fixed_peak_min, isomax=abs_max)
+            ],
+            traces=[4, 5], # Important: Targets trace indices 4 (Valleys) and 5 (Peaks)
+            name=str(f)
+        ))
     fig_vol.frames = frames
 
     fig_vol.update_layout(
@@ -603,7 +589,7 @@ else:
         updatemenus=[dict(
             type="buttons",
             x=0.05, y=0,
-            direction="left", 
+            direction="left",
             buttons=[
                 dict(
                     label="Play",
@@ -621,17 +607,17 @@ else:
             active=0, yanchor="top", xanchor="left", currentvalue=dict(font=dict(size=16), prefix="Frequency: ", suffix=" Hz"),
             transition=dict(duration=0), pad=dict(b=10, t=50), len=0.9, x=0.15, y=0,
             steps=[dict(args=[[str(f)], dict(frame=dict(duration=300, redraw=True), mode="immediate", transition=dict(duration=0))],
-            label=str(f), method="animate") for f in sim_config.freqs_3d]
+                        label=str(f), method="animate") for f in sim_config.freqs_3d]
         )]
     )
-    st.plotly_chart(fig_vol, width='stretch') 
+    st.plotly_chart(fig_vol, width='stretch')
 
 if "3." in mode:
     import pandas as pd
-    
+
     st.markdown("### Fundamental Room Modes (1st to 3rd Order)")
-    
-    # 7つの基本モード (名前, nx, ny, nz)
+
+    # Fundamental room modes (Name, nx, ny, nz)
     base_modes = [
         ("Axial X (1,0,0)", 1, 0, 0),
         ("Axial Y (0,1,0)", 0, 1, 0),
@@ -641,16 +627,16 @@ if "3." in mode:
         ("Tangential YZ (0,1,1)", 0, 1, 1),
         ("Oblique (1,1,1)", 1, 1, 1)
     ]
-    
+
     table_data = []
     c = sim_config.speed_of_sound
-    
+
     for name, nx, ny, nz in base_modes:
-        # 1次周波数の計算
+        # Calculate 1st order frequency
         f1 = (c / 2.0) * np.sqrt((nx/room.Lx)**2 + (ny/room.Ly)**2 + (nz/room.Lz)**2)
-        # 等価長（波長の半分）
+        # Calculate equivalent path length (half-wavelength)
         length = c / (2.0 * f1)
-        
+
         table_data.append({
             "Mode": name,
             "Length (m)": round(length, 2),
@@ -658,13 +644,13 @@ if "3." in mode:
             "2nd (Hz)": round(f1 * 2, 1),
             "3rd (Hz)": round(f1 * 3, 1)
         })
-        
+
     df_modes = pd.DataFrame(table_data)
-    
-    # テーブルの表示（hide_indexで行番号を消し、スッキリさせます）
+
+    # Render table without index column
     st.dataframe(df_modes, width='stretch', hide_index=True)
-    
-    # CSVエクスポート用ボタン
+
+    # Setup CSV export payload
     csv_data = df_modes.to_csv(index=False).encode('utf-8-sig')
     st.download_button(
         label="📥 Download Table as CSV",

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V0.9.0] - 2026-05-23
+
+### Added
+- Redesigned 2D Top-Down View (Mode 1): Replaced the 3D wireframe in the placement mode with a flat, responsive 2D scatter plot (XY plane) to improve UX. Z-axis data is preserved as text labels.
+- Precise Measurement Rulers: Implemented an edge-to-edge ruler system in Mode 1 with major ticks at 0.5m intervals and inward minor ticks at 0.1m intervals. Visual aspect ratio is strictly locked to 1:1.
+- 1/4 Subdivision Grid: Introduced a 4x4 internal grid into both the 3D wireframe (Mode 2) and 2D view (Mode 1) to easily identify 1/2 and 1/4 wavelength nodes/antinodes.
+- Room Modes Analytics Table (Mode 3): Added a data table calculating equivalent length and resonant frequencies (1st to 3rd order) for the 7 fundamental room modes. Included a one-click CSV export function (UTF-8 with BOM).
+
+### Changed
+- Statistical Volume Scaling (+/- 2 sigma): Overhauled 3D volumetric color mapping to use a robust +/- 2 sigma range (covering ~95.4% of the data), preventing the visuals from being washed out by extreme local outliers.
+- Refined Volume Visuals: Adjusted volumetric thresholds to map the top 30% to peaks and bottom 30% to valleys. Reduced opacity to 0.25 and increased surface count to 8 for a smoother "cloud-like" visual.
+- Codebase Cleanup: Removed legacy/redundant comments and replaced Japanese comments with concise English documentation to improve future maintainability.
+
 ## [V0.8.2] - 2026-05-22
 
 ### Changed
