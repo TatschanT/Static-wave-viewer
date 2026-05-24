@@ -42,7 +42,7 @@ If it proves useful to anyone out there, I couldn’t be happier.
    ```
 3. Run the Streamlit app:
    ```bash
-   streamlit run Standing_Wave_Viewer.py
+   streamlit run main.py
    ```
 Then, open the provided Local URL (usually `http://localhost:8501`) in your web browser.
 
