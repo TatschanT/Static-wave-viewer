@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import plotly.graph_objects as go
 from dataclasses import dataclass
+import config
 
 # ==========================================
 # Data Models
@@ -33,11 +34,11 @@ class SimConfig:
 # ==========================================
 
 DEFAULT_STATE = {
-    "Lx": 3.5, "Ly": 2.6, "Lz": 2.4,
-    "spk_x": 0.5, "spk_y": 0.5, "spk_z": 0.5,
-    "spk2_x": 3.0, "spk2_y": 0.5, "spk2_z": 0.5,
-    "mic_x": 1.75, "mic_y": 1.3, "mic_z": 1.2,
-    "R": 0.80
+    "Lx": config.AppDefaults.LX, "Ly": config.AppDefaults.LY, "Lz": config.AppDefaults.LZ,
+    "spk_x": config.AppDefaults.SPK_X, "spk_y": config.AppDefaults.SPK_Y, "spk_z": config.AppDefaults.SPK_Z,
+    "spk2_x": config.AppDefaults.SPK2_X, "spk2_y": config.AppDefaults.SPK2_Y, "spk2_z": config.AppDefaults.SPK2_Z,
+    "mic_x": config.AppDefaults.MIC_X, "mic_y": config.AppDefaults.MIC_Y, "mic_z": config.AppDefaults.MIC_Z,
+    "R": config.AppDefaults.R
 }
 
 st.set_page_config(page_title="Standing Wave Viewer V0.9.0", layout="wide")
@@ -74,12 +75,12 @@ mode = st.sidebar.radio("Operation Mode", [
 st.sidebar.markdown("---")
 high_res = st.sidebar.toggle("High Resolution Mode (Slower)", value=False, help="Enable 32x32x32 grid and 2Hz steps. Default is 24x24x24 grid and 5Hz steps.")
 large_view = st.sidebar.toggle("Large 3D View", value=False, help="Increase the 3D graph height for high-resolution displays.")
-chart_height = 800 if large_view else 500
+chart_height = config.AppDefaults.CHART_HEIGHT_LARGE if large_view else config.AppDefaults.CHART_HEIGHT_NORMAL
 
 st.sidebar.header("Room Dimensions (m)")
-Lx = st.sidebar.slider("Width (Lx)", 1.0, 10.0, DEFAULT_STATE["Lx"], 0.02)
-Ly = st.sidebar.slider("Depth (Ly)", 1.0, 10.0, DEFAULT_STATE["Ly"], 0.02)
-Lz = st.sidebar.slider("Height (Lz)", 1.0, 5.0, DEFAULT_STATE["Lz"], 0.02)
+Lx = st.sidebar.slider("Width (Lx)", config.AppDefaults.ROOM_MIN_L, config.AppDefaults.ROOM_MAX_L_XY, DEFAULT_STATE["Lx"], 0.02)
+Ly = st.sidebar.slider("Depth (Ly)", config.AppDefaults.ROOM_MIN_L, config.AppDefaults.ROOM_MAX_L_XY, DEFAULT_STATE["Ly"], 0.02)
+Lz = st.sidebar.slider("Height (Lz)", config.AppDefaults.ROOM_MIN_L, config.AppDefaults.ROOM_MAX_L_Z, DEFAULT_STATE["Lz"], 0.02)
 
 st.sidebar.header("Equipment Positions (m)")
 
@@ -156,15 +157,15 @@ with st.sidebar.expander("🧱 Wall Reflection Coefficients"):
 # Physics Constants & Object Initialization
 # ==========================================
 
-SPEED_OF_SOUND = 343.0
-FREQS_1D = np.arange(20, 201, 1)
+SPEED_OF_SOUND = config.PhysicalConfig.SPEED_OF_SOUND
+FREQS_1D = np.arange(config.SimResolution.FREQ_1D_START, config.SimResolution.FREQ_1D_END, config.SimResolution.FREQ_1D_STEP)
 
 if high_res:
-    FREQS_3D = np.arange(20, 201, 2)
-    grid_size = 37
+    FREQS_3D = np.arange(config.SimResolution.FREQ_3D_START_HIGH, config.SimResolution.FREQ_3D_END_HIGH, config.SimResolution.FREQ_3D_STEP_HIGH)
+    grid_size = config.SimResolution.GRID_SIZE_HIGH
 else:
-    FREQS_3D = np.arange(20, 205, 5)
-    grid_size = 25
+    FREQS_3D = np.arange(config.SimResolution.FREQ_3D_START_NORMAL, config.SimResolution.FREQ_3D_END_NORMAL, config.SimResolution.FREQ_3D_STEP_NORMAL)
+    grid_size = config.SimResolution.GRID_SIZE_NORMAL
 
 room = RoomConfig(Lx=Lx, Ly=Ly, Lz=Lz, Rx=Rx, Ry=Ry, Rz=Rz)
 spk1_pos = Position(x=spk_x, y=spk_y, z=spk_z)
@@ -178,9 +179,9 @@ sim_config = SimConfig(speed_of_sound=SPEED_OF_SOUND, freqs_1d=FREQS_1D, freqs_3
 
 def get_max_modes(room: RoomConfig, config: SimConfig) -> tuple:
     return (
-        int(2.0 * room.Lx * 250 / config.speed_of_sound) + 2,
-        int(2.0 * room.Ly * 250 / config.speed_of_sound) + 2,
-        int(2.0 * room.Lz * 250 / config.speed_of_sound) + 2
+        int(2.0 * room.Lx * config.PhysicalConfig.MAX_CALC_FREQ / config.speed_of_sound) + 2,
+        int(2.0 * room.Ly * config.PhysicalConfig.MAX_CALC_FREQ / config.speed_of_sound) + 2,
+        int(2.0 * room.Lz * config.PhysicalConfig.MAX_CALC_FREQ / config.speed_of_sound) + 2
     )
 
 def calc_shape(n: int, pos: float, L: float, R: float) -> float:
@@ -194,9 +195,9 @@ def get_psi(n: int, pos: float, L: float, R: float) -> complex:
 
 def calc_gamma(nx: int, ny: int, nz: int, room: RoomConfig) -> float:
     n_sum = nx + ny + nz
-    if n_sum == 0: return 5.0
+    if n_sum == 0: return config.PhysicalConfig.GAMMA_ZERO_SUM
     R_eff = (nx * room.Rx + ny * room.Ry + nz * room.Rz) / n_sum
-    return 3.0 + 40.0 * (1.0 - R_eff)
+    return config.PhysicalConfig.GAMMA_BASE + config.PhysicalConfig.GAMMA_SCALE * (1.0 - R_eff)
 
 @st.cache_data(show_spinner=False)
 def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic: Position, num_src: int, corr_mode: str, config: SimConfig, smoothing: bool = False) -> np.ndarray:
@@ -208,7 +209,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
     FREQS_1D = config.freqs_1d
 
     if smoothing:
-        d_val = 0.1
+        d_val = config.SimResolution.SMOOTHING_OFFSET
         offsets = [-d_val, 0, d_val]
         mic_positions = [(mic.x + dx, mic.y + dy, mic.z + dz) for dx in offsets for dy in offsets for dz in offsets]
     else:
@@ -230,7 +231,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                 for nz in range(max_nz):
                     if nx == 0 and ny == 0 and nz == 0: continue
                     fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
-                    if fn > 250: continue
+                    if fn > config.PhysicalConfig.MAX_CALC_FREQ: continue
 
                     gamma = calc_gamma(nx, ny, nz, room)
                     psi1 = get_psi(nx, sx, Lx, Rx) * get_psi(ny, sy, Ly, Ry) * get_psi(nz, sz, Lz, Rz)
@@ -240,7 +241,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                     rec_psis = np.array([get_psi(nx, m_x, Lx, Rx) * get_psi(ny, m_y, Ly, Ry) * get_psi(nz, m_z, Lz, Rz) for m_x, m_y, m_z in zip(mxs, mys, mzs)])
 
                     for i, f_query in enumerate(FREQS_1D):
-                        res_complex = (50.0 / fn) / ((f_query - fn) + 1j * gamma)
+                        res_complex = (config.PhysicalConfig.RESONANCE_SCALING / fn) / ((f_query - fn) + 1j * gamma)
                         P_complex_1_mics[:, i] += psi1 * rec_psis * res_complex
                         if num_src == 2:
                             P_complex_2_mics[:, i] += psi2 * rec_psis * res_complex
@@ -256,7 +257,7 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                 for nz in range(max_nz):
                     if nx == 0 and ny == 0 and nz == 0: continue
                     fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
-                    if fn > 250: continue
+                    if fn > config.PhysicalConfig.MAX_CALC_FREQ: continue
 
                     psi1 = get_psi(nx, sx, Lx, Rx) * get_psi(ny, sy, Ly, Ry) * get_psi(nz, sz, Lz, Rz)
                     if num_src == 2:
@@ -272,13 +273,13 @@ def compute_f_response_1d(room: RoomConfig, spk1: Position, spk2: Position, mic:
                     gamma = calc_gamma(nx, ny, nz, room)
 
                     for i, f in enumerate(FREQS_1D):
-                        res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
+                        res_amp = (config.PhysicalConfig.RESONANCE_SCALING / fn) / np.sqrt((f - fn)**2 + gamma**2)
                         tensor_1d_mics[:, i] += (exc * recs * res_amp) ** 2
 
         tensor_1d_mics = np.sqrt(tensor_1d_mics)
         tensor_1d_avg = np.sqrt(np.mean(tensor_1d_mics ** 2, axis=0))
 
-    f_response_db = 20 * np.log10(np.clip(tensor_1d_avg, 1e-10, None))
+    f_response_db = 20 * np.log10(np.clip(tensor_1d_avg, config.PhysicalConfig.DB_CLIP_MIN, None))
     f_response_db = f_response_db - np.max(f_response_db)
     return f_response_db
 
@@ -308,10 +309,10 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                     for nz in range(max_nz):
                         if nx == 0 and ny == 0 and nz == 0: continue
                         fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
-                        if fn > 250: continue
+                        if fn > config.PhysicalConfig.MAX_CALC_FREQ: continue
 
                         gamma = calc_gamma(nx, ny, nz, room)
-                        res_complex = (50.0 / fn) / ((f_query - fn) + 1j * gamma)
+                        res_complex = (config.PhysicalConfig.RESONANCE_SCALING / fn) / ((f_query - fn) + 1j * gamma)
 
                         mode_complex = get_psi(nx, X, Lx, Rx) * get_psi(ny, Y, Ly, Ry) * get_psi(nz, Z, Lz, Rz)
                         psi1 = get_psi(nx, sx, Lx, Rx) * get_psi(ny, sy, Ly, Ry) * get_psi(nz, sz, Lz, Rz)
@@ -332,7 +333,7 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                 for nz in range(max_nz):
                     if nx == 0 and ny == 0 and nz == 0: continue
                     fn = (SPEED_OF_SOUND / 2.0) * np.sqrt((nx/Lx)**2 + (ny/Ly)**2 + (nz/Lz)**2)
-                    if fn > 250: continue
+                    if fn > config.PhysicalConfig.MAX_CALC_FREQ: continue
 
                     psi1 = get_psi(nx, sx, Lx, Rx) * get_psi(ny, sy, Ly, Ry) * get_psi(nz, sz, Lz, Rz)
                     if num_src == 2:
@@ -348,7 +349,7 @@ def compute_tensor_3d(room: RoomConfig, spk1: Position, spk2: Position, num_src:
                     gamma = calc_gamma(nx, ny, nz, room)
 
                     for i, f in enumerate(FREQS_3D):
-                        res_amp = (50.0 / fn) / np.sqrt((f - fn)**2 + gamma**2)
+                        res_amp = (config.PhysicalConfig.RESONANCE_SCALING / fn) / np.sqrt((f - fn)**2 + gamma**2)
                         tensor[i] += (exc * mode_shape * res_amp) ** 2
 
         tensor = np.sqrt(tensor)
