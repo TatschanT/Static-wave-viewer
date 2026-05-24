@@ -26,6 +26,10 @@ If it proves useful to anyone out there, I couldn’t be happier.
 2. **🌊 Standing Wave Viz (Current Setup)**: Renders the full 3D volumetric tensor of sound pressure based on your layout, allowing you to "play" the animation across frequencies.
 3. **📐 Room Bare Specs (Rigid/Corner)**: A baseline mode simulating a perfectly rigid room (Reflection = 1.0) with a corner-placed source to visualize the raw, pure acoustic properties of the room shape.
 
+## Screenshots
+![Standing Wave Viewer image](images/SWVscreenshot.png)
+![Standing Wave Viewer image](images/example.png)
+
 ## 🛠️ Installation & Usage
 
 ### Prerequisites
@@ -49,6 +53,7 @@ Then, open the provided Local URL (usually `http://localhost:8501`) in your web 
 ### Running at streamlit cloud
 Please access https://standing-wave-viewer091.streamlit.app/
 When the app had been suspended, please rebake.
+
 
 Disclaimer
 
