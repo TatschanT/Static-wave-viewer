@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V0.9.1] - 2026-05-24
+### Changed
+- Refactoring: Separated paramaters into an independent module (`config.py`).
+- Refactoring: Separated core physics calculation logic into an independent module (`physics.py`).
+- Refactoring: Extracted Plotly 2D/3D rendering logic into a dedicated module (`render.py`).
+- Refactoring: Streamlined `main.py` to act purely as a UI controller and data flow manager, adopting an MVC-like architecture.
+- Optimization: Removed redundant `SimConfig` dataclass and integrated global parameter references directly via `config.py`.
+- Architecture: Established a modular foundation to facilitate future standalone desktop application development.
+
 ## [V0.9.0] - 2026-05-23
 
 ### Added
