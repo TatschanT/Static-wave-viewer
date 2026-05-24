@@ -54,7 +54,7 @@ Then, open the provided Local URL (usually `http://localhost:8501`) in your web 
 Please access https://standing-wave-viewer091.streamlit.app/
 When the app had been suspended, please rebake.
 
-
+---
 Disclaimer
 
 This software is provided "AS IS", without any warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non‑infringement.
