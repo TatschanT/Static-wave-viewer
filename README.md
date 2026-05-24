@@ -47,7 +47,7 @@ If it proves useful to anyone out there, I couldn’t be happier.
 Then, open the provided Local URL (usually `http://localhost:8501`) in your web browser.
 
 ### Running at streamlit cloud
-Please access https://standing-wave-viewer.streamlit.app/
+Please access https://standing-wave-viewer091.streamlit.app/
 When the app had been suspended, please rebake.
 
 Disclaimer
