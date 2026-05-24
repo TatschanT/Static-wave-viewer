@@ -18,7 +18,7 @@ DEFAULT_STATE = {
     "R": app_config.AppDefaults.R
 }
 
-st.set_page_config(page_title="Standing Wave Viewer V0.9.1", layout="wide")
+st.set_page_config(page_title="Standing Wave Viewer V0.9.2", layout="wide")
 
 # ==========================================
 # UI Setup: Sidebar Controls

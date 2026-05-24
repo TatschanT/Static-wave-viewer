@@ -40,7 +40,13 @@ def calc_shape(n: int, pos: float, L: float, R: float) -> float:
 def get_psi(n: int, pos: float, L: float, R: float) -> complex:
     if n == 0: return 1.0 + 0j
     theta = n * np.pi * pos / L
-    return np.cos(theta) - 1j * ((1 - R) / (1 + R)) * np.sin(theta)
+    
+    # [FIX] True Complex Field の非対称性アーティファクトを解消
+    # 従来の片側基準の位相遅れから、部屋の中心(L/2)を基準とした対称放射モデルへ変更
+    beta = (1.0 - R) / (1.0 + R)
+    center_offset = (pos - L / 2.0) / (L / 2.0) # x=0で-1, 中心で0, x=Lで1 となる対称スケーラー
+    
+    return np.cos(theta) - 1j * beta * center_offset * np.sin(theta)
 
 def calc_gamma(nx: int, ny: int, nz: int, room: RoomConfig) -> float:
     n_sum = nx + ny + nz
